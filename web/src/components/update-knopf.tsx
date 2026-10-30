@@ -59,7 +59,7 @@ export function UpdateKnopf({
         } else {
           setPhase("ende");
           // Neue Version: Seite neu laden, damit Nummer und Knöpfe stimmen.
-          if (neu.zustand === "fertig" || neu.zustand === "zurueck") {
+          if (neu.zustand === "fertig" || neu.zustand === "zurueck" || neu.zustand === "zurueckgesetzt") {
             setTimeout(() => window.location.reload(), 2500);
           }
         }
@@ -133,6 +133,7 @@ function StatusZeile({ status }: { status: UpdateStatus }) {
     fertig: `Update eingespielt${status.von && status.nach ? ` (${status.von} → ${status.nach})` : ""}.`,
     aktuell: "Schon auf dem neuesten Stand.",
     zurueck: `Update hat nicht geklappt, zurück auf Version ${status.nach || "?"}.`,
+    zurueckgesetzt: `Zurück auf Version ${status.nach || "?"}.`,
     fehler: `Update nicht eingespielt: ${status.schritt}.`,
     laeuft: "",
   }[status.zustand];

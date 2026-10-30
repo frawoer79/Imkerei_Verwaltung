@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { istAdmin } from "@/lib/konto";
+import { entwicklerSeiten } from "@/lib/hauptzugang";
 import { mailKonfigLaden } from "@/lib/mail";
 import { BEREICHE, abgeschalteteBereiche } from "@/lib/bereiche";
 import { BUNDESLAENDER } from "@/lib/bundeslaender";
@@ -69,7 +70,7 @@ export default async function EinstellungenPage() {
     styleguide: { text: "Farben und Bausteine" },
   };
 
-  const gruppen = sichtbareGruppen(aus, admin).map((gruppe) => ({
+  const gruppen = sichtbareGruppen(aus, admin, false, entwicklerSeiten()).map((gruppe) => ({
     titel: gruppe.titel,
     zusatz: gruppe.nurAdmin ? "nur du" : undefined,
     zeilen: gruppe.punkte.map((punkt) => ({

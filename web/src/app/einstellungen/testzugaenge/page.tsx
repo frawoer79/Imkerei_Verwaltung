@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { entwicklerSeiten } from "@/lib/hauptzugang";
 import { basisPrisma } from "@/lib/prisma";
 import { istAdmin, testerSchema } from "@/lib/konto";
 import { beispieldatenVorhanden } from "@/lib/beispieldaten";
@@ -24,7 +25,7 @@ const datumZeit = new Intl.DateTimeFormat("de-DE", {
 // Verwaltung der Testzugänge - nur für Frank sichtbar. Tester sehen hier
 // eine "nicht gefunden"-Seite.
 export default async function TestzugaengePage() {
-  if (!(await istAdmin())) notFound();
+  if (!entwicklerSeiten() || !(await istAdmin())) notFound();
 
   const testzugaenge = await basisPrisma.testzugang.findMany({ orderBy: { erstelltAm: "asc" } });
   const frei = MAX_TESTZUGAENGE - testzugaenge.length;

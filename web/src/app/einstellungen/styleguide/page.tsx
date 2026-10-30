@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UpdateLeiste } from "@/components/update-leiste";
 import { AenderungsText } from "@/components/aenderungs-text";
 import { notFound } from "next/navigation";
+import { entwicklerSeiten } from "@/lib/hauptzugang";
 import { istAdmin } from "@/lib/konto";
 import { AMPEL_FLAECHE, AMPEL_TEXT } from "@/lib/ampel";
 import { FAELLIGKEIT_PLAKETTE } from "@/lib/faelligkeit";
@@ -112,7 +113,7 @@ function Quelle({ children }: { children: React.ReactNode }) {
 }
 
 export default async function StyleguidePage() {
-  if (!(await istAdmin())) notFound();
+  if (!entwicklerSeiten() || !(await istAdmin())) notFound();
 
   const sanftmut = BEURTEILUNGS_KRITERIEN.find((k) => k.feld === "sanftmut")!;
   const schwarmtrieb = BEURTEILUNGS_KRITERIEN.find((k) => k.feld === "schwarmtrieb")!;
