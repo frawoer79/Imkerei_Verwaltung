@@ -30,6 +30,8 @@ export type EinstellungsPunkt = {
   // Helfer (lib/nutzer.ts) sehen nur Punkte mit auchHelfer oder nurHelfer.
   auchHelfer?: boolean;
   nurHelfer?: boolean;
+  // Nur auf der Instanz des Entwicklers (lib/hauptzugang.ts, entwicklerSeiten).
+  nurEntwickler?: boolean;
 };
 
 export type EinstellungsGruppe = { titel: string; nurAdmin?: boolean; punkte: EinstellungsPunkt[] };
@@ -67,23 +69,35 @@ export const EINSTELLUNGS_GRUPPEN: EinstellungsGruppe[] = [
       { schluessel: "helfer", href: "/einstellungen/helfer", label: "Helfer", icon: IconPerson, nurAdmin: true },
       { schluessel: "historie", href: "/einstellungen/historie", label: "Historie", icon: IconVerlauf, nurAdmin: true },
       { schluessel: "system", href: "/einstellungen/system", label: "System", icon: IconAktualisieren, nurAdmin: true },
-      { schluessel: "testzugaenge", href: "/einstellungen/testzugaenge", label: "Testzugänge", icon: IconPersonen, nurAdmin: true },
-      { schluessel: "styleguide", href: "/einstellungen/styleguide", label: "Styleguide", icon: IconPalette, nurAdmin: true },
+      { schluessel: "testzugaenge", href: "/einstellungen/testzugaenge", label: "Testzugänge", icon: IconPersonen, nurAdmin: true, nurEntwickler: true },
+      { schluessel: "styleguide", href: "/einstellungen/styleguide", label: "Styleguide", icon: IconPalette, nurAdmin: true, nurEntwickler: true },
     ],
   },
 ];
 
-export function punktSichtbar(punkt: EinstellungsPunkt, aus: readonly string[], admin: boolean, helfer = false) {
+export function punktSichtbar(
+  punkt: EinstellungsPunkt,
+  aus: readonly string[],
+  admin: boolean,
+  helfer = false,
+  entwickler = false,
+) {
   if (helfer) return Boolean(punkt.auchHelfer || punkt.nurHelfer);
   if (punkt.nurHelfer) return false;
+  if (punkt.nurEntwickler && !entwickler) return false;
   if (punkt.nurAdmin && !admin) return false;
   return !punkt.bereiche || punkt.bereiche.some((bereich) => !aus.includes(bereich));
 }
 
 // Gruppen nur mit den Punkten, die dieses Konto sehen darf; leere fallen weg.
-export function sichtbareGruppen(aus: readonly string[], admin: boolean, helfer = false): EinstellungsGruppe[] {
+export function sichtbareGruppen(
+  aus: readonly string[],
+  admin: boolean,
+  helfer = false,
+  entwickler = false,
+): EinstellungsGruppe[] {
   return EINSTELLUNGS_GRUPPEN.map((gruppe) => ({
     ...gruppe,
-    punkte: gruppe.punkte.filter((punkt) => punktSichtbar(punkt, aus, admin, helfer)),
+    punkte: gruppe.punkte.filter((punkt) => punktSichtbar(punkt, aus, admin, helfer, entwickler)),
   })).filter((gruppe) => gruppe.punkte.length > 0);
 }

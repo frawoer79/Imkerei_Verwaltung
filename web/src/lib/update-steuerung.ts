@@ -16,7 +16,7 @@ import path from "path";
 const SIGNAL = "update-angefordert";
 const STATUS = "update-status.json";
 
-export type UpdateZustand = "laeuft" | "fertig" | "aktuell" | "zurueck" | "fehler";
+export type UpdateZustand = "laeuft" | "fertig" | "aktuell" | "zurueck" | "zurueckgesetzt" | "fehler";
 
 export type UpdateStatus = {
   zustand: UpdateZustand;
@@ -49,7 +49,7 @@ export async function updateAnfordern(): Promise<void> {
   await writeFile(path.join(dir, SIGNAL), `${new Date().toISOString()}\n`);
 }
 
-const ZUSTAENDE: UpdateZustand[] = ["laeuft", "fertig", "aktuell", "zurueck", "fehler"];
+const ZUSTAENDE: UpdateZustand[] = ["laeuft", "fertig", "aktuell", "zurueck", "zurueckgesetzt", "fehler"];
 
 // Liest den Stand des letzten Laufs. Höchstens 4 kB, alles Unerwartete zählt
 // als "kein Stand".

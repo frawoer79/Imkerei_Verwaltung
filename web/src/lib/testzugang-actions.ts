@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { basisPrisma } from "@/lib/datenbank";
+import { entwicklerSeiten } from "@/lib/hauptzugang";
 import { istAdmin, testerSchema } from "@/lib/konto";
 import { beispieldatenAnlegen } from "@/lib/beispieldaten";
 import { passwortHashen } from "@/lib/anmeldung";
@@ -23,7 +24,7 @@ import {
 const VERWALTUNG_PFAD = "/einstellungen/testzugaenge";
 
 async function nurAdmin() {
-  if (!(await istAdmin())) {
+  if (!entwicklerSeiten() || !(await istAdmin())) {
     throw new Error("Nur der Administrator darf Testzugänge verwalten.");
   }
 }

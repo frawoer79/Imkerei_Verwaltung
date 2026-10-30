@@ -14,6 +14,11 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## 1.0.1
+
+- Testzugänge und Styleguide sind Werkzeuge für die Entwicklung. Sie erscheinen bei selbst installierten Instanzen nicht mehr in den Einstellungen.
+- Nach `sudo imkerei-update --zurueck` zeigt die App jetzt "Von Hand zurückgegangen" statt "Update hat nicht geklappt". Das gilt für Server, die ab dieser Version installiert werden.
+
 ## 1.0.0
 
 - Erste öffentliche Version.

@@ -7,9 +7,19 @@ import { sichtbareGruppen } from "@/lib/einstellungen-punkte";
 // Spalte links in den Einstellungen (ab lg): alle Punkte nach Gruppen, der
 // geöffnete hervorgehoben. So wechselt man am PC mit einem Klick, ohne
 // Zurück. Auf /einstellungen selbst steht rechts der Bienenhalter.
-export function EinstellungenSpalte({ aus, admin, helfer }: { aus: readonly string[]; admin: boolean; helfer: boolean }) {
+export function EinstellungenSpalte({
+  aus,
+  admin,
+  helfer,
+  entwickler,
+}: {
+  aus: readonly string[];
+  admin: boolean;
+  helfer: boolean;
+  entwickler: boolean;
+}) {
   const pathname = usePathname();
-  const gruppen = sichtbareGruppen(aus, admin, helfer);
+  const gruppen = sichtbareGruppen(aus, admin, helfer, entwickler);
   return (
     <nav aria-label="Einstellungen" className="flex flex-col gap-4">
       <p className="px-3 text-2xl font-semibold tracking-tight">Einstellungen</p>

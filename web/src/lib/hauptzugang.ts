@@ -16,6 +16,13 @@ function ausUmgebung(): { benutzername: string; passwort: string } | null {
   return benutzername !== "" && passwort !== "" ? { benutzername, passwort } : null;
 }
 
+// Testzugänge und Styleguide sind Werkzeuge für die Entwicklung. Sichtbar nur,
+// wenn der Hauptzugang aus den Umgebungsvariablen kommt (Franks Instanz),
+// nicht bei selbst installierten Instanzen.
+export function entwicklerSeiten(): boolean {
+  return ausUmgebung() !== null;
+}
+
 async function ausDatenbank() {
   return basisPrisma.hauptzugang.findUnique({ where: { id: "standard" } });
 }

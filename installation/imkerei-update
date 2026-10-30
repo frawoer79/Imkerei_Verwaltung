@@ -155,8 +155,10 @@ sicherung_einspielen() {
 }
 
 # Zurück auf das gemerkte Image und die Sicherung (sicherungen/vorher.env).
+# Zweiter Wert: Zustand für die App, "zurueck" nach einem gescheiterten
+# Update, "zurueckgesetzt" beim Zurückgehen von Hand.
 zurueck() {
-  local grund="$1"
+  local grund="$1" ende="${2:-zurueck}"
   # shellcheck disable=SC1091
   . "$SICHERUNGEN/vorher.env"
   nach_version="${VORHER_VERSION:-}"
@@ -171,7 +173,7 @@ zurueck() {
   docker tag "$VORHER_BILD" "$BILD"
   docker compose up -d app
   if warten_gesund; then
-    status zurueck "Zurück auf Version ${VORHER_VERSION:-?}" "$grund"
+    status "$ende" "Zurück auf Version ${VORHER_VERSION:-?}" "$grund"
     hinweis "Die App läuft wieder mit Version ${VORHER_VERSION:-?}."
     return 0
   fi
@@ -199,7 +201,7 @@ if [ "$modus" = "zurueck" ]; then
     read -r -p "Wirklich zurückgehen? (ja/nein) " antwort </dev/tty
     [ "$antwort" = "ja" ] || { echo "Nichts geändert."; exit 0; }
   fi
-  zurueck "Von Hand zurückgegangen."
+  zurueck "Von Hand zurückgegangen." zurueckgesetzt
   exit 0
 fi
 
