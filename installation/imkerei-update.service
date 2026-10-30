@@ -1,0 +1,10 @@
+# Wird von imkerei-update.path gestartet, siehe dort.
+[Unit]
+Description=Imkereiverwaltung: Update einspielen
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/imkerei-update --aus-app
+TimeoutStartSec=30min

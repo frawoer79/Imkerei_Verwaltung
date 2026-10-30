@@ -1,0 +1,7 @@
+# Caddy nimmt die Anfragen aus dem Internet an, holt sich selbst ein
+# HTTPS-Zertifikat für die Adresse in DOMAIN (aus der .env) und reicht alles
+# an die App weiter.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}

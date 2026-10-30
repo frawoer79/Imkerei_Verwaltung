@@ -1,0 +1,16 @@
+Imkereiverwaltung
+Copyright 2026 Frank Wörner
+
+Lizenz: Apache License 2.0 mit "Commons Clause" License Condition v1.0,
+siehe LICENSE. Kurz auf Deutsch in LIZENZ.md.
+
+Diese Software nutzt Bibliotheken anderer Projekte unter deren eigenen
+Lizenzen. Die Lizenztexte liegen im Docker-Image jeweils im Ordner des
+Pakets unter /app/node_modules/<paket>/.
+
+Hervorzuheben:
+- sharp (Apache-2.0) bringt libvips mit, lizenziert unter der GNU Lesser
+  General Public License 2.1 (LGPL-2.1-or-later). libvips wird unverändert
+  als eigene Programmbibliothek genutzt. Quelltext: https://github.com/libvips/libvips
+- Leaflet (BSD-2-Clause), Kartendarstellung.
+- Kartendaten © OpenStreetMap-Mitwirkende (ODbL), https://www.openstreetmap.org/copyright

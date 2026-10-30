@@ -1,0 +1,28 @@
+# --- Synology / NAS ---
+# Die Diskstation legt neben jeder Datei versteckte Index- und Vorschauordner an.
+# Die gehoeren nicht ins Projekt und lassen sich teilweise nicht einmal loeschen.
+@eaDir/
+*/@eaDir/
+.DS_Store
+@tmp/
+#recycle/
+
+# --- Windows ---
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Editor ---
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*~
+
+# --- Zugangsdaten ---
+# Nichts mit Passwoertern, Schluesseln oder Tokens darf nach GitHub.
+.env
+*.key
+*.pem
+geheim/

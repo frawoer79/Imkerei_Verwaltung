@@ -1,0 +1,13 @@
+# Knopf "Update einspielen" in der App (Einstellungen -> System): Die App
+# legt nur die Datei update-angefordert in den Ordner steuerung. systemd
+# bemerkt sie und startet imkerei-update.service. So kann die App genau diese
+# eine Sache auslösen und braucht keinen Zugriff auf Docker.
+[Unit]
+Description=Imkereiverwaltung: auf Update-Wunsch aus der App warten
+
+[Path]
+PathExists=/opt/imkereiverwaltung/steuerung/update-angefordert
+Unit=imkerei-update.service
+
+[Install]
+WantedBy=multi-user.target

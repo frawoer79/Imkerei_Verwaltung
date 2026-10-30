@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Anleitung Imkereiverwaltung</title>
+<style>
+:root {
+  --bg: #f3f4f0; --card: #ffffff; --text: #1d211e; --muted: #5d665f; --border: #dfe3dc;
+  --accent: #1f5c45; --accent-soft: #e4efe8; --warn-bg: #fff8e1; --warn-border: #f0d27a; --warn-text: #6b4d00;
+  --tip-bg: #eaf3ee; --tip-border: #b9d5c4;
+  --hero: #1f5c45; --on-hero: #ffffff; --on-accent: #ffffff;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161a17; --card: #1f2420; --text: #e6e9e6; --muted: #a1aaa3; --border: #323a34;
+    --accent: #6fc39a; --accent-soft: #233229; --warn-bg: #2d2714; --warn-border: #6b5a1f; --warn-text: #f0d78a;
+    --tip-bg: #1d2a22; --tip-border: #345241;  --on-accent: #10241a; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #161a17; --card: #1f2420; --text: #e6e9e6; --muted: #a1aaa3; --border: #323a34;
+    --accent: #6fc39a; --accent-soft: #233229; --warn-bg: #2d2714; --warn-border: #6b5a1f; --warn-text: #f0d78a;
+    --tip-bg: #1d2a22; --tip-border: #345241;  --on-accent: #10241a; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: var(--accent); }
+.layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); height: 100vh; overflow-y: auto; padding: 28px 18px 28px 24px; border-right: 1px solid var(--border); }
+nav.toc .marke { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 18px; margin-bottom: 18px; color: var(--text); text-decoration: none; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: k; }
+nav.toc li { counter-increment: k; }
+nav.toc li a { display: block; padding: 5px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; font-size: 14.5px; }
+nav.toc li a::before { content: counter(k) ". "; color: var(--accent); font-weight: 600; }
+nav.toc li a:hover { background: var(--accent-soft); color: var(--text); }
+main { padding: 32px 40px 80px; min-width: 0; }
+header.titel { background: var(--hero); color: var(--on-hero); border-radius: 16px; padding: 34px 36px; margin-bottom: 36px; }
+header.titel h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.2; }
+header.titel p { margin: 0; opacity: .92; max-width: 720px; }
+section { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; }
+h2 { margin: 0 0 12px; font-size: 25px; line-height: 1.25; }
+h2 .nr { color: var(--accent); margin-right: 6px; }
+h3 { margin: 28px 0 8px; font-size: 19px; }
+p { margin: 0 0 12px; max-width: 78ch; }
+ul, ol { padding-left: 22px; margin: 0 0 12px; max-width: 76ch; }
+li { margin-bottom: 4px; }
+figure { margin: 18px 0 22px; }
+figure img { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+figure.schmal img { max-width: 560px; }
+figure.handy img { max-width: 300px; border-radius: 18px; }
+figcaption { font-size: 13.5px; color: var(--muted); margin-top: 8px; max-width: 78ch; }
+.nebeneinander { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-start; }
+.nebeneinander figure { margin: 10px 0; }
+.nebeneinander figure.handy { flex: 0 1 300px; }
+.nebeneinander figure.breit { flex: 1 1 520px; min-width: 0; }
+.hinweis, .tipp { border-radius: 10px; padding: 12px 16px; margin: 14px 0; font-size: 15px; max-width: 80ch; }
+.hinweis { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text); }
+.tipp { background: var(--tip-bg); border: 1px solid var(--tip-border); }
+.hinweis strong, .tipp strong { display: block; margin-bottom: 2px; }
+.schritte { counter-reset: s; list-style: none; padding: 0; }
+.schritte > li { counter-increment: s; position: relative; padding-left: 40px; margin-bottom: 10px; }
+.schritte > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: var(--on-accent); font-weight: 650; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+kbd, .knopf { display: inline-block; font: 600 13px/1.4 system-ui, sans-serif; padding: 1px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); white-space: nowrap; }
+table { border-collapse: collapse; width: 100%; max-width: 820px; font-size: 15px; margin: 8px 0 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
+.zurueck { font-size: 13px; text-decoration: none; }
+@media (max-width: 900px) {
+  .layout { display: block; }
+  nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 20px 16px; }
+  nav.toc ol { columns: 2; column-gap: 12px; }
+  main { padding: 20px 16px 60px; }
+  section { padding: 20px 18px; border-radius: 12px; }
+  header.titel { padding: 24px 20px; border-radius: 12px; }
+  header.titel h1 { font-size: 26px; }
+  figure.handy img { max-width: 100%; }
+}
+@media (max-width: 520px) { nav.toc ol { columns: 1; } }
+@media print {
+  nav.toc { display: none; } .layout { display: block; } section { break-inside: auto; border: 0; padding: 0; }
+  figure { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="toc" aria-label="Inhalt">
+  <a class="marke" href="#start">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--accent)"><path d="M12 2.5 20.2 7.25v9.5L12 21.5 3.8 16.75v-9.5Z"/><path d="M7.5 12.5c2.5-3 6.5-3 9 0M7.5 12.5c2.5 2 6.5 2 9 0"/></svg>
+    Imkereiverwaltung
+  </a>
+  <ol>
+    <li><a href="#zugang">Zugang einrichten</a></li>
+    <li><a href="#aufbau">Aufbau der App</a></li>
+    <li><a href="#beispiel">Beispielstand &amp; erste Schritte</a></li>
+    <li><a href="#staende">Bienenstände</a></li>
+    <li><a href="#voelker">Völker</a></li>
+    <li><a href="#stockkarte">Durchsicht erfassen</a></li>
+    <li><a href="#massnahmen">Maßnahmen &amp; Kalender</a></li>
+    <li><a href="#koeniginnen">Königinnen</a></li>
+    <li><a href="#zucht">Zucht</a></li>
+    <li><a href="#behandlungen">Behandlungen</a></li>
+    <li><a href="#dokumente">Dokumente</a></li>
+    <li><a href="#lager">Lager</a></li>
+    <li><a href="#qr">QR-Codes &amp; Scannen</a></li>
+    <li><a href="#velutina">Velutina</a></li>
+    <li><a href="#einstellungen">Einstellungen</a></li>
+    <li><a href="#fragen">Tipps &amp; Fragen</a></li>
+  </ol>
+</nav>
+
+<main id="start">
+<header class="titel">
+  <h1>Anleitung zur Imkereiverwaltung</h1>
+  <p>Die Imkereiverwaltung ist deine digitale Stockkarte: Bienenstände, Völker, Durchsichten, Königinnen, Zucht, Behandlungen und Lager an einem Ort, am Rechner genauso wie am Handy direkt am Bienenstand. Diese Anleitung führt dich vom ersten Anmelden bis zur fertigen Stockkarte.</p>
+</header>
+
+<div class="hinweis">
+  <strong>Zu den Bildern in dieser Anleitung</strong>
+  Die Bilder zeigen einen erfundenen Beispielstand „Obstwiese“ mit drei Völkern. Der Kartenhintergrund ist in den Bildern ausgeblendet, in der App siehst du dort die echte Karte bzw. das Satellitenbild. Die App wird laufend weiterentwickelt, Einzelheiten können deshalb leicht anders aussehen. Stand dieser Anleitung: 30. Oktober 2026.
+</div>
+<!--nur-datei-->
+<div class="tipp">
+  <strong>Auch in der App</strong>
+  Dieselbe Anleitung findest du in der App jederzeit unter dem Menüpunkt <em>Anleitung</em>.
+</div>
+<!--/nur-datei-->
+
+<!-- 1 -->
+<section id="zugang">
+<h2><span class="nr">1</span>Einrichten und anmelden</h2>
+<p>Die Imkereiverwaltung läuft auf deinem eigenen Server. Deine Daten liegen nur dort. Wie du die App installierst, steht in der <a href="https://github.com/frawoer79/Imkerei_Verwaltung/blob/main/installation/LIESMICH.md">Installationsanleitung</a>. Am Ende zeigt das Installationsskript einen <strong>Einrichtungscode</strong>.</p>
+<h3>Erster Start: der Einrichtungsassistent</h3>
+<ol class="schritte">
+  <li>Öffne die Adresse deiner App im Browser. Beim ersten Mal kommt der Einrichtungsassistent.</li>
+  <li>Gib den <strong>Einrichtungscode</strong> ein. Er steht auch in der Datei <code>.env</code> auf dem Server.</li>
+  <li>Trag <strong>deinen Namen</strong> ein (steht z.&nbsp;B. im Bestandsbuch) und auf Wunsch den <strong>Namen der Imkerei</strong> (steht oben im Menü) und dein <strong>Bundesland</strong>.</li>
+  <li>Wähle <strong>Benutzername</strong> und <strong>Passwort</strong>. Damit meldest du dich künftig an. Dieser Zugang ist der Hauptzugang: Er darf alles, auch Helfer anlegen und Updates einspielen.</li>
+  <li>Lass den Haken bei <em>Täglich nach Updates suchen</em> gesetzt, dann meldet die App neue Versionen selbst. Tippe auf <span class="knopf">Einrichten</span>.</li>
+</ol>
+<h3>Helfer einladen</h3>
+<p>Arbeiten Familie oder Mitimker mit, bekommen sie eigene Zugänge zu deinen Daten. Unter <em>Einstellungen → Helfer</em> legst du sie an:</p>
+<ol class="schritte">
+  <li><strong>Name</strong> und <strong>Rechte</strong> wählen: <em>Lesen und schreiben</em> oder <em>Nur lesen</em>.</li>
+  <li>Ein <strong>Startpasswort</strong> vergeben. Gib es auf anderem Weg weiter, etwa mündlich. Beim ersten Anmelden muss der Helfer ein eigenes Passwort wählen.</li>
+  <li>Auf Wunsch eine <strong>E-Mail</strong> eintragen. Dorthin schickt die App den Link zur App (nie ein Passwort), und der Helfer kann damit selbst ein neues Passwort anfordern. Das klappt, sobald der <a href="#einstellungen">E-Mail-Versand</a> eingerichtet ist.</li>
+</ol>
+<p>Rechte ändern, Passwort zurücksetzen oder einen Helfer sperren geht jederzeit in derselben Liste. Unter <em>Einstellungen → Historie</em> siehst du, wer was angelegt oder geändert hat.</p>
+<h3>Später wieder anmelden</h3>
+<p>Öffne die Adresse der App und melde dich mit Namen und Passwort an. Du bleibst danach 30 Tage angemeldet.</p>
+<figure class="schmal"><img data-bild="login-desktop" alt="Anmeldeseite"><figcaption>Die Anmeldeseite.</figcaption></figure>
+<p><strong>Passwort vergessen?</strong> Helfer mit hinterlegter E-Mail tippen auf der Anmeldeseite auf <em>Passwort vergessen</em> und bekommen einen Link, der eine Stunde gilt. Sonst setzt der Hauptzugang unter <em>Einstellungen → Helfer</em> ein neues Startpasswort. Für den Hauptzugang selbst gibt es einen Befehl auf dem Server, siehe <a href="https://github.com/frawoer79/Imkerei_Verwaltung/blob/main/installation/LIESMICH.md">Installationsanleitung</a>.</p>
+<div class="tipp">
+  <strong>Tipp: Auf den Home-Bildschirm legen</strong>
+  Am iPhone/iPad in Safari auf <em>Teilen</em> und dann <em>Zum Home-Bildschirm</em> tippen (Android/Chrome: Menü, <em>Zum Startbildschirm hinzufügen</em>). Dann startet die Imkereiverwaltung wie eine App ohne Adressleiste, und das Handy kann sich Name und Passwort merken.
+</div>
+<h3>Du hast einen Testzugang bekommen?</h3>
+<p>Manche Betreiber laden Tester per persönlichem Einladungslink ein. Er gilt genau einmal. Öffne ihn, wähle Namen und Passwort, lies den Hinweis zur Testversion und tippe auf <span class="knopf">Zugang einrichten</span>. Dabei entsteht deine eigene Datenablage mit dem Beispielstand „Obstwiese“. Niemand sonst sieht deine Daten, aber es gibt keine Garantie für sie. Merk dir danach die Adresse der App, der Einladungslink funktioniert kein zweites Mal.</p>
+<div class="nebeneinander">
+  <figure class="handy"><img data-bild="einladung-handy" alt="Einladungsseite mit Feldern für Name und Passwort"><figcaption>Die Einladungsseite am Handy.</figcaption></figure>
+  <figure class="handy"><img data-bild="willkommen-handy" alt="Willkommensseite mit Adresse der App und Hinweis auf den Beispielstand"><figcaption>Nach dem Einrichten: Adresse merken, dann Anleitung lesen oder gleich loslegen.</figcaption></figure>
+</div>
+</section>
+
+<!-- 2 -->
+<section id="aufbau">
+<h2><span class="nr">2</span>Aufbau der App</h2>
+<p>Wie das Menü aussieht, hängt vom gewählten <a href="#einstellungen">Design</a> ab. Im Design <em>Wiese</em> (Vorgabe) steht es am Rechner links, am Handy oben als Kachelraster. Im Design <em>Wald</em> liegt es am Handy als Leiste unten, mit <em>Scannen</em> in der Mitte und den übrigen Bereichen unter <em>Mehr</em>. Im Design <em>Bergsee</em> ist es ein dunkles Band oben, am Handy eine Reihe Reiter. <em>Einstellungen</em> und <em>Anleitung</em> stehen in allen Designs etwas kleiner und abgesetzt unter dem Hauptmenü. Die Bereiche sind überall dieselben:</p>
+<table>
+  <tr><th>Bereich</th><th>Wofür</th></tr>
+  <tr><td><strong>Bienenstände</strong></td><td>Startseite: deine Stände mit den Völkern darin, von dort geht es zur Stockkarte jedes Volkes. Oben sucht das Feld <em>Volk suchen</em> über alle Stände nach Name oder Nummer.</td></tr>
+  <tr><td><strong>Scannen</strong></td><td>QR-Code an der Beute scannen und direkt die richtige Stockkarte öffnen.</td></tr>
+  <tr><td><strong>Maßnahmen</strong></td><td>Alles, was zu tun ist, über alle Völker hinweg, als Liste und als Monatskalender. Die rote Zahl zeigt, was heute fällig oder überfällig ist.</td></tr>
+  <tr><td><strong>Königinnen</strong></td><td>Bestand mit Abstammung (Mutter- und Vaterseite), Begattung, Lebenslauf und Bewertung, dazu die Zuchtplanung.</td></tr>
+  <tr><td><strong>Behandlungen</strong></td><td>Bestandsbuch für Tierarzneimittel, mit Nachweis als PDF. Dazu Verfahren ohne Medikament wie TBE oder Bannwabe, mit Fahrplan.</td></tr>
+  <tr><td><strong>Dokumente</strong></td><td>Rechnungen, Gesundheitszeugnisse usw., auf Wunsch mit Stand, Volk oder Königin verknüpft und per E-Mail versendbar.</td></tr>
+  <tr><td><strong>Lager</strong></td><td>Material (Zargen, Klimadeckel, Mittelwände, Futter) und Erzeugnisse (Honig, Wachs …), auf Wunsch mit Warenwert. Bestandslisten und Buchungen als PDF.</td></tr>
+  <tr><td><strong>Velutina</strong></td><td>Meldungen der Asiatischen Hornisse rund um deine Stände (nur Baden-Württemberg) und die Nestsuche per Locktopf.</td></tr>
+  <tr><td><strong>Einstellungen</strong></td><td>Deine Angaben als Bienenhalter, welche Bereiche du nutzt, Design, E-Mail, Beutensysteme, Belegstellen, Lager (Sorten, Gebinde, Preise, Lagerorte), QR-Codes, Kalender-Abo, Helfer, Historie, Updates.</td></tr>
+  <tr><td><strong>Anleitung</strong></td><td>Diese Anleitung.</td></tr>
+</table>
+<p>Brauchst du einen Bereich nicht, etwa Zucht oder Lager, blendest du ihn unter <em>Einstellungen → Bereiche</em> aus (siehe <a href="#einstellungen">Einstellungen</a>).</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="start" alt="Startseite am Rechner mit Menü links"><figcaption>Am Rechner: Menü links, unten der Hell/Dunkel-Schalter und <em>Abmelden</em>. Das gelbe Abzeichen erscheint nur in Testzugängen. Alle Bilder zeigen das Design Wiese.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-start" alt="Startseite am Handy mit Kachelmenü oben"><figcaption>Am Handy: Menü oben als Kacheln.</figcaption></figure>
+</div>
+<p>Über jeder Seitenüberschrift steht eine Zeile mit <span class="knopf">← Zurück</span> und dem Pfad, z.&nbsp;B. „Bienenstände › Obstwiese“. <em>Zurück</em> führt auf die Seite, von der du gekommen bist, ein Tipp auf den Pfad springt direkt dorthin. Mit dem Schalter neben der Sonne wechselst du zwischen heller und dunkler Darstellung. Neben dem Logo steht „Imkereiverwaltung“. Einen eigenen Namen, etwa den deiner Imkerei, trägst du unter <em>Einstellungen → Bienenhalter</em> bei <em>Name im Menü</em> ein.</p>
+<div class="nebeneinander">
+  <figure class="handy"><img data-bild="handy-volk-dunkel" alt="Volk-Seite in dunkler Darstellung"><figcaption>Dunkle Darstellung am Handy.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-massnahmen-dunkel" alt="Maßnahmen in dunkler Darstellung"><figcaption>Maßnahmen, dunkel.</figcaption></figure>
+</div>
+</section>
+
+<!-- 3 -->
+<section id="beispiel">
+<h2><span class="nr">3</span>Deine ersten Schritte</h2>
+<p>Nach dem Einrichten ist die App leer. Am schnellsten kommst du so zu deiner ersten eigenen Stockkarte:</p>
+<ol class="schritte">
+  <li><strong>Einstellungen → Bienenhalter:</strong> Name, Anschrift und Bundesland prüfen. Das steht später im Kopf des Behandlungsnachweises, und am Bundesland erkennt die App, ob sie dir die Hornissen-Meldungen aus Baden-Württemberg zeigt.</li>
+  <li><strong>Einstellungen → Beutensysteme:</strong> dein System hinzufügen, z.&nbsp;B. Zander oder Deutsch Normalmaß (siehe unten). Sonst kannst du beim Volk keinen passenden Brutraum wählen.</li>
+  <li><strong>Bienenstände → Neuer Bienenstand:</strong> deinen ersten Stand anlegen.</li>
+  <li><strong>Im Stand → Neues Volk:</strong> die Völker anlegen.</li>
+  <li><strong>Im Volk → Durchsicht erfassen:</strong> die erste Durchsicht festhalten.</li>
+</ol>
+<p>Königinnen, Belegstellen, Medikamente und Lager kannst du später nach Bedarf ergänzen.</p>
+<h3>Der Beispielstand in den Bildern</h3>
+<p>Die Bilder dieser Anleitung zeigen den erfundenen Stand <strong>„Obstwiese“</strong> mit drei Völkern und einer Saison Geschichte. Testzugänge bekommen ihn mit. An ihm siehst du, wie die Teile zusammenhängen:</p>
+<ul>
+  <li><strong>Volk 1</strong> ist das starke, sanfte Wirtschaftsvolk. Seine Königin trägt den gelben Stern, zwei Honigernten stehen im Verlauf und im Lager.</li>
+  <li><strong>Volk 2</strong> ging im Mai in Schwarmstimmung. Daraus entstand ein Ableger, die Nachschau steht als erledigte Maßnahme im Verlauf.</li>
+  <li><strong>Volk 3</strong> ist dieser Ableger. Seine Königin hat es selbst nachgezogen, sie stammt laut Abstammung von der Königin aus Volk 2. Im Juli lag Varroa über der Schadschwelle, danach folgt die Ameisensäure-Behandlung aller drei Völker. Der Fütterer liegt noch drauf, und eine Futterkontrolle ist überfällig.</li>
+</ul>
+<p>Hast du einen Testzugang, darfst du am Beispielstand alles ändern, ergänzen oder löschen. Brauchst du ihn nicht mehr, archivierst du ihn (Stand öffnen, <em>bearbeiten</em>, <em>Archivieren</em>). Die Beispielbehandlung bleibt dabei im Bestandsbuch stehen; solange sie existiert, lässt sich der Stand nur archivieren, nicht endgültig löschen.</p>
+
+<h3>Beutensystem hinzufügen</h3>
+<p>Unter <em>Einstellungen → Beutensysteme</em> tippst du auf dein System, etwa <span class="knopf">+ Deutsch Normalmaß</span>. Die genormten Rähmchenmaße und Zargen kommen gleich mit, samt einem Richtwert, wie viel Honig eine volle Zarge ungefähr bringt. Klappst du ein System auf, kannst du Wabenzahl und Honigmenge an deine Erfahrung anpassen. Ein System, das nicht in der Liste steht, legst du über <em>Eigenes System anlegen</em> an.</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="beuten-leer" alt="Auswahl der gängigen Beutensysteme"><figcaption>Auswahl der gängigen Systeme.</figcaption></figure>
+  <figure class="breit"><img data-bild="beuten-zander" alt="Zander aufgeklappt mit Zargen"><figcaption>Zander aufgeklappt: die Zargen mit Wabenzahl und Honig-Richtwert.</figcaption></figure>
+</div>
+</section>
+
+<!-- 4 -->
+<section id="staende">
+<h2><span class="nr">4</span>Bienenstände</h2>
+<h3>Stand anlegen</h3>
+<p>Auf der Startseite <span class="knopf">+ Neuer Bienenstand</span>. Gib einen Namen ein und wähle die Art:</p>
+<ul>
+  <li><strong>Fester Stand:</strong> dort wird auch überwintert. Auf allen Karten blauer Pin.</li>
+  <li><strong>Wanderstand:</strong> Völker stehen nur vorübergehend dort, z.&nbsp;B. für eine Tracht oder als Ableger. Auf allen Karten gelber Pin.</li>
+</ul>
+<p>Den Standort setzt du auf zwei gleichwertigen Wegen: Adresse eintippen und <span class="knopf">Auf Karte suchen</span>, oder direkt in die Karte tippen bzw. den Punkt verschieben. Beides füllt das jeweils andere automatisch aus. Mit <em>Satellit</em> und <em>Hybrid</em> (Luftbild mit Straßen und Ortsnamen) wechselst du die Ansicht, <em>Vollbild</em> hilft am Handy beim genauen Setzen. Ein Foto des Standorts ist optional und erscheint später als Bild auf der Kachel.</p>
+<figure><img data-bild="stand-neu" alt="Formular Neuer Bienenstand"><figcaption>Neuer Bienenstand (Kartenhintergrund in der Anleitung ausgeblendet).</figcaption></figure>
+
+<h3>Die Übersicht</h3>
+<p>Jeder Stand ist eine Kachel mit Art, Ort, Zahl der Völker und Datum der letzten Durchsicht. Die Zahl oben an der Kachel zählt Maßnahmen: <strong>rot</strong> mit Warnzeichen, wenn dort etwas überfällig oder heute fällig ist, sonst unauffällig grau mit allen offenen. Eine Maßnahme für mehrere Völker zählt dabei einmal. Ein Tipp auf die Kachel öffnet den Stand. Über <span class="knopf">Kartenübersicht</span> siehst du alle Stände auf einer Karte, mit Flugradius und einer kleinen Legende unten links.</p>
+<figure><img data-bild="karte" alt="Kartenübersicht mit Stand und Flugradius"><figcaption>Kartenübersicht mit Flugradius, oben einstellbar. Die Einstellung merkt sich jedes Gerät.</figcaption></figure>
+
+<h3>Die Seite eines Stands</h3>
+<p>Oben stehen Name, Art, Ort und Notizen. Darunter links der Kasten <strong>Asiatische Hornisse</strong> (siehe <a href="#velutina">Velutina</a>), rechts eine kleine Kartenvorschau. Die Vorschau lässt sich nicht verschieben, ein Tipp darauf öffnet die Kartenübersicht. Am Handy stehen die Völker zuerst, Karte und Hornissen-Kasten weiter unten.</p>
+<p>Die Knöpfe <span class="knopf">Durchsicht erfassen</span> und <span class="knopf">Maßnahme</span> halten etwas für mehrere Völker dieses Stands auf einmal fest (siehe <a href="#sammel">Mehrere Völker auf einmal</a>). Darunter folgen die <strong>Völker als Kacheln</strong>. Jede Kachel zeigt:</p>
+<ul>
+  <li>Zeichenfarbe der Königin als Punkt, Name, Rasse, bei herausragenden Königinnen den Stern;</li>
+  <li>Plaketten: Status, <strong>Gesamteindruck</strong> der letzten Durchsicht in Ampelfarbe, <em>Fütterer drauf</em>, solange ein Fütterer aufliegt;</li>
+  <li>den Kasten <strong>Wertung letzte Durchsicht</strong>: alle Bewertungen der letzten Durchsicht als Text, grün, gelb oder rot gefärbt;</li>
+  <li>die offenen Maßnahmen mit Termin. Der Kasten wird rot, wenn etwas überfällig ist, gelb bei „heute fällig“, sonst bleibt er ruhig.</li>
+</ul>
+<ul>
+  <li><strong>Sortierung:</strong> <em>Chronologisch</em> (Reihenfolge der Anlage) oder <em>Standposition</em>. Bei Standposition schiebst du die Kacheln mit den Pfeilen so, wie die Beuten wirklich nebeneinander stehen.</li>
+  <li><strong>bearbeiten</strong> neben dem Standnamen: Angaben, Standort und Foto ändern, Stand archivieren.</li>
+  <li>Ganz unten: <strong>Dokumente</strong> zu diesem Stand.</li>
+</ul>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="stand" alt="Seite des Bienenstands Obstwiese"><figcaption>Stand „Obstwiese“: Bei Volk 3 ist die Futterkontrolle überfällig, deshalb ist sein Maßnahmen-Kasten rot. Der Fütterer liegt noch drauf.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-stand" alt="Bienenstand am Handy"><figcaption>Derselbe Stand am Handy.</figcaption></figure>
+</div>
+<div class="tipp">
+  <strong>Archivieren statt löschen</strong>
+  Ein Stand (oder ein Volk), den du nicht mehr brauchst, wird archiviert: Er verschwindet aus den Übersichten, bleibt aber mit allen Stockkarten und Fotos erhalten und lässt sich wiederherstellen. Archivierte Stände findest du unten auf der Startseite. Endgültiges Löschen ist ein eigener Schritt, bei dem du zur Sicherheit den Namen eintippen musst. Völker und Stände mit Behandlungen lassen sich gar nicht löschen, nur archivieren, weil das Bestandsbuch vollständig bleiben muss.
+</div>
+</section>
+
+<!-- 5 -->
+<section id="voelker">
+<h2><span class="nr">5</span>Völker</h2>
+<h3>Volk anlegen</h3>
+<p>Auf der Seite des Stands <span class="knopf">+ Neues Volk</span>. Pflicht ist nur der Name bzw. die Stocknummer. Dazu kommen Rasse, Jahrgang und Kennzeichnung der Königin, der <strong>Brutraum</strong> (Zarge aus deinem Beutensystem) mit der <strong>Anzahl</strong> (1 = einräumig, 2 = zweiräumig …), der <strong>Deckel</strong> (Standarddeckel oder ein Klimadeckel aus dem Lager) und optional ein Foto der Beute.</p>
+<figure class="schmal" style="max-width:440px"><img data-bild="volk-neu" alt="Dialog Neues Volk anlegen"><figcaption>Neues Volk anlegen, hier mit einer Königin aus dem Bestand.</figcaption></figure>
+<div class="tipp"><strong>Königin gleich mit anlegen</strong>Gibst du hier Jahrgang oder Zeichen an, entsteht dazu automatisch eine Königin im Bereich <a href="#koeniginnen">Königinnen</a>. Dort kannst du sie später um Abstammung und Begattung ergänzen.</div>
+<p><strong>Königin aus dem Bestand:</strong> Hast du freie Königinnen (Reserve, in keinem Volk), steht bei der Königin ein Umschalter <em>Neu erfassen | Vorhandene</em>. Bei <em>Vorhandene</em> wählst du sie aus der Liste. Ein kleiner Steckbrief zeigt Farbe, Zeichen, Rasse und Herkunft. Die Rasse übernimmt die App, solange du keine eigene einträgst. Im Lebenslauf der Königin steht danach „In ein Volk zugesetzt“. Königinnen, die schon in einem Volk sitzen, wählst du hier nicht. Dafür gibt es <em>Umweiseln</em> (siehe unten).</p>
+
+<h3>Die Seite eines Volkes (Stockkarte)</h3>
+<p>Ein Tipp auf die Kachel öffnet das Volk. Der Kopf ist auf allen Geräten gleich aufgebaut:</p>
+<ul>
+  <li>Links das Foto der Beute, daneben Name, <strong>Plaketten</strong> (Status, <em>QR gelernt</em>, <em>Fütterer drauf</em>) sowie Rasse, Betriebsweise (z.&nbsp;B. „2 × Zander ganz“) und ein Klimadeckel, falls vorhanden.</li>
+  <li>Darunter eine eigene Zeile für die <strong>Königin</strong>, die gerade im Volk sitzt. Ein Tipp darauf öffnet ihre Seite. Rechts daneben steht <span class="knopf">Umweiseln</span>.</li>
+  <li>Die Knöpfe <span class="knopf">Bearbeiten</span>, <span class="knopf">Umziehen</span> (an einen anderen Stand, wird im Verlauf vermerkt; fehlt, solange du nur einen Stand hast), <span class="knopf">QR-Code</span> (siehe <a href="#qr">QR-Codes</a>) und <span class="knopf">Status</span> (aktiv, aufgelöst, verkauft oder verloren).</li>
+</ul>
+<p>Darunter stehen das zuletzt erfasste <strong>Gewicht</strong> und drei Knöpfe: <span class="knopf">Durchsicht erfassen</span>, <span class="knopf">Maßnahme</span> und <span class="knopf">Behandlung</span>. Alle drei öffnen ihr Formular direkt für dieses Volk.</p>
+<p>Hat das Volk <strong>offene Maßnahmen</strong>, stehen sie direkt darunter in einer eigenen Karte. Jede Maßnahme ist ein Kärtchen mit Farbleiste links und Termin: rot überfällig, gelb heute, grün in den nächsten 7 Tagen, grau später. Ab drei Maßnahmen ist die Karte zugeklappt und nennt nur, wie viele überfällig oder heute fällig sind. Ein Tipp klappt sie auf. Ein Haken erledigt sie gleich bei der Durchsicht, ohne Umweg über den alten Eintrag oder die Maßnahmen-Seite. Vertippt? <span class="knopf">Rückgängig</span> in der Leiste unten holt sie zurück. Bei einer Maßnahme für mehrere Völker gilt der Haken nur für dieses Volk. Abgehakt wird nur hier, nicht im Verlauf.</p>
+<h3>Umweiseln</h3>
+<p>Setzt du eine neue Königin ein, tippst du in der Königin-Zeile auf <span class="knopf">Umweiseln</span>. Im Fenster wählst du das Datum, die neue Königin (aus der Reserve, aus einem anderen Volk oder neu erfasst mit Jahrgang, Zeichen und Herkunft) und was mit der alten geschieht: <em>Abgedrückt</em>, <em>In Reserve / Ableger</em>, <em>Verkauft</em> oder <em>Verschwunden</em>. Beide Lebensläufe trägt die App selbst ein. Im Verlauf des Volks erscheint eine Karte „Umgeweiselt alt → neu“. <em>Bearbeiten</em> beim Volk ändert die Angaben der jetzigen Königin nur noch zum Korrigieren.</p>
+<figure class="schmal" style="max-width:440px"><img data-bild="umweiseln" alt="Fenster Umweiseln"><figcaption>Umweiseln: neue Königin aus dem Bestand, die alte wurde abgedrückt.</figcaption></figure>
+<p>Es folgt der <strong>Verlauf</strong> auf einer eigenen, leicht getönten Fläche, neueste zuerst und nach Saison gegliedert. Jede Karte hat links einen Farbstreifen: grün für Durchsicht und Königin, grau für Maßnahmen, honigfarben für Behandlungen. Die Kopfzeile jeder Saison fasst zusammen, z.&nbsp;B. „6 Durchsichten · 3 Maßnahmen · 1 Behandlung“, mit der letzten Bewertung, Varroa und Gewicht. Im Verlauf stehen diese Karten:</p>
+<ul>
+  <li><strong>Durchsichten:</strong> Jede Bewertung erscheint als kleiner Strahl mit grüner, gelber und roter Zone, einer Marke und dem Wertungstext, z.&nbsp;B. „Stark“ oder „Gut–Mittel“ (zwischen zwei Stufen). Gelb und rot tragen zusätzlich ein Warnzeichen. Alle übrigen Angaben stehen als kurze Chips darunter, nur was du wirklich ausgefüllt hast. Varroa über der Schadschwelle erscheint als roter Kasten. <span class="knopf">Durchsicht öffnen ›</span> rechts oben öffnet den Eintrag.</li>
+  <li><strong>Maßnahmen</strong>, die ohne Durchsicht angelegt wurden: „○ offen“ mit Termin oder „✓ erledigt“. Stift und Mülleimer bearbeiten bzw. löschen sie. Abhaken geht oben unter <em>Offene Maßnahmen</em>.</li>
+  <li><strong>Behandlungen</strong> am Tag der Anwendung: Medikament, wogegen, Menge, Dauer und Wartezeit. Den vollständigen Nachweis gibt es unter <a href="#behandlungen">Behandlungen</a>. Verfahren ohne Medikament (TBE, Bannwabe …) erscheinen ebenfalls hier.</li>
+  <li><strong>Königinnenwechsel:</strong> „Umgeweiselt alt → neu“ bzw. „Königin zugesetzt“. Die Saison-Zeile zählt sie mit.</li>
+</ul>
+<figure><img data-bild="verlauf-durchsicht" alt="Durchsicht im Verlauf mit Mini-Strahlen und Chips"><figcaption>Eine Durchsicht im Verlauf. Jede Wertung ist ein kleiner Strahl. Die übrigen Angaben stehen als Chips darunter.</figcaption></figure>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="verlauf-behandlung" alt="Behandlung im Verlauf"><figcaption>Eine Behandlung im Verlauf.</figcaption></figure>
+  <figure class="breit"><img data-bild="verlauf-massnahme" alt="Maßnahme im Verlauf"><figcaption>Eine Maßnahme ohne Durchsicht.</figcaption></figure>
+</div>
+<p>Fotos im Verlauf öffnest du mit einem Tipp groß. Dort kannst du zoomen, zwischen den Fotos blättern und sie herunterladen; am iPhone legt <span class="knopf">In Fotos sichern</span> das Bild direkt in die Fotos-App.</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="volk" alt="Seite von Volk 1 mit Verlauf"><figcaption>Volk 1: Kopf mit Königinzeile und <em>Umweiseln</em>, darunter die drei Knöpfe, die offenen Maßnahmen und der Verlauf.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-volk" alt="Volk 3 am Handy"><figcaption>Volk 3 am Handy: überfällige Futterkontrolle, Durchsichten als Mini-Strahlen.</figcaption></figure>
+</div>
+<div class="nebeneinander">
+  <figure class="breit" style="max-width:420px"><img data-bild="d-volk-status" alt="Fenster Status ändern"><figcaption>Status ändern.</figcaption></figure>
+</div>
+</section>
+
+<!-- 6 -->
+<section id="stockkarte">
+<h2><span class="nr">6</span>Durchsicht erfassen</h2>
+<p>Im Volk auf <span class="knopf">Durchsicht erfassen</span> tippen. Datum und Uhrzeit sind auf „jetzt“ gesetzt. Die Angaben sind in aufklappbare Abschnitte gegliedert, Brutraum und Bewertung sind schon offen. <strong>Du füllst nur aus, was du wirklich beobachtet hast</strong>, leere Abschnitte und unberührte Regler bleiben einfach leer. Unten steht immer sichtbar der Knopf <span class="knopf">Durchsicht speichern</span>.</p>
+<table>
+  <tr><th>Abschnitt</th><th>Was hinein gehört</th></tr>
+  <tr><td>Brutraum</td><td>Haken nur für das, was du gesehen hast: Königin, Stifte, Larven, verdeckelte Brut, Weiselzellen, drohnenbrütig. Besetzte Wabengassen und bebrütete Waben stellst du mit + und − ein. Grau steht die Zahl vom letzten Mal; ein Tipp darauf übernimmt sie, das erste + zählt von dort weiter.</td></tr>
+  <tr><td>Waben</td><td>Genommene oder gegebene Leerwaben, Mittelwände, Brut- und Futterwaben, Baurahmen, ebenfalls mit „letztes Mal“.</td></tr>
+  <tr><td>Varroa</td><td>Zählweise (Puderzucker, Auswaschung, Gemülldiagnose), gezählte Milben, Probengröße bzw. Tage der Windel. Die App rechnet auf Milben je Tag bzw. Prozent um und vergleicht mit der Schadschwelle der Jahreszeit. Unter <em>Biotechnik</em> der Haken <em>Drohnenbrut geschnitten</em> und ein freies Feld. Verfahren mit Fahrplan wie TBE oder Bannwabe legst du unter <a href="#behandlungen">Behandlungen</a> an. Tierarzneimittel gehören nicht hierher, sondern unter <a href="#behandlungen">Behandlungen</a>.</td></tr>
+  <tr><td>Bewertung des Volkes</td><td>Regler für Volksstärke, Futtermenge, Sanftmut, Wabensitz, Schwarmtrieb, Legeleistung und Gesamteindruck, siehe unten. Dazu die Haken <em>Bienen haben mich angeflogen</em> und <em>Abgeschwärmt</em>.</td></tr>
+  <tr><td>Honigraum &amp; Ernte</td><td>Honigraum aufsetzen oder abnehmen, Ernte (die App schätzt die Menge aus den abgenommenen Zargen und Waben, du kannst sie anpassen) und Honigart.</td></tr>
+  <tr><td>Fütterung</td><td>Futterart und Menge in kg, dazu der Haken <em>Fütterer aufgesetzt</em>. Er ist so vorbelegt, wie es gerade am Volk ist; nimmst du den Haken weg, gilt der Fütterer als abgenommen.</td></tr>
+  <tr><td>Gewicht</td><td>Gewogenes Gewicht, einseitig oder vollständig. Wiegst du in Teilen, tippst du einfach „13+17“, die App rechnet „= 30 kg“. Der Knopf <span class="knopf">+</span> neben dem Feld hilft am iPhone, dessen Zahlentastatur kein Plus hat.</td></tr>
+</table>
+<p>Unten folgen <strong>Notizen</strong>, <strong>Maßnahmen</strong> (eine pro Zeile, sie landen in der <a href="#massnahmen">Maßnahmenliste</a>) und bis zu fünf <strong>Fotos</strong>, direkt mit der Handykamera oder aus der Mediathek.</p>
+<h3>Bewerten mit den Reglern</h3>
+<p>Jeder Regler hat sechs benannte Stufen, links die beste, rechts die schlechteste, z.&nbsp;B. bei der Volksstärke von „Sehr stark“ bis „Sehr schwach“, beim Schwarmtrieb von „Keiner“ über „Spielnäpfchen“ und „Bestiftet“ bis „Verdeckelt“. Zwischen zwei Stufen kannst du auch die Mitte wählen. Ein Regler ist erst gesetzt, wenn du ihn bewegst; dann färbt er sich grün, gelb oder rot. Das kleine × setzt ihn wieder auf „nicht bewertet“.</p>
+<p>Ein grauer, gestrichelter <strong>Ring</strong> zeigt, wo du das Volk beim letzten Mal eingestuft hast, solange der Regler leer ist zusätzlich als Text „Letztes Mal: Stark (04.10.)“. Übernommen wird davon nichts, du entscheidest jedes Mal neu.</p>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-eintrag-dialog" alt="Durchsicht erfassen, Abschnitt Brutraum"><figcaption>Brutraum: Haken für das Gesehene, Wabengassen mit „letztes Mal“.</figcaption></figure>
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-eintrag-beurteilung" alt="Bewertung mit sechsstufigen Reglern"><figcaption>Bewertung: sechs Stufen je Regler, der gestrichelte Ring zeigt die letzte Wertung.</figcaption></figure>
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-eintrag-varroa" alt="Abschnitt Varroa"><figcaption>Varroa: Zählweise und Milben, darunter Biotechnik.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-eintrag" alt="Bewertung am Handy"><figcaption>Am Handy.</figcaption></figure>
+</div>
+<p>Drei Abschnitte, die oft gebraucht werden:</p>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="d-eintrag-honig" alt="Abschnitt Honigraum und Ernte"><figcaption>Ernte: Zarge angeben. Die App schätzt die Menge, der Regler korrigiert.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="d-eintrag-fuetterung" alt="Abschnitt Fütterung"><figcaption>Fütterung: Futterart und Menge. Der Haken sagt, ob der Fütterer drauf ist.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="d-eintrag-gewicht" alt="Abschnitt Gewicht mit 13+17"><figcaption>Gewicht in Teilen: „13+17“ tippen, die App rechnet.</figcaption></figure>
+</div>
+<h3>Beim Speichern: kurze Rückfragen</h3>
+<p>Nach <span class="knopf">Durchsicht speichern</span> kann die App bis zu drei kurze Fragen stellen. Nach der letzten Antwort speichert sie sofort, ein zweiter Tipp ist nicht nötig.</p>
+<ol>
+  <li><strong>Auffälligkeiten:</strong> Ist ein Wert kritisch (z.&nbsp;B. Varroa über der Schadschwelle, sehr wenig Futter, drohnenbrütig, abgeschwärmt), schlägt die App vor, gleich eine Maßnahme mit Termin anzulegen.</li>
+  <li><strong>Bewertung zur Königin:</strong> Sitzt eine Königin im Volk, fragt die App, ob die Bewertung auch in ihren Lebenslauf soll. Nur mit „Ja“ zählt die Durchsicht für ihre Bewertung, so entscheidest du selbst, was eingeht (z.&nbsp;B. nicht bei einer Durchsicht im Gewitter).</li>
+  <li><strong>Honig ins Lager:</strong> Bei einer neuen Ernte kannst du die Menge gleich in den Honigbestand im <a href="#lager">Lager</a> buchen.</li>
+</ol>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="frage-massnahme" alt="Rückfrage Auffällige Bewertung mit Maßnahme"><figcaption>Auffällig: Die App schlägt eine Maßnahme vor. Text und Termin kannst du ändern.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="frage-koenigin" alt="Rückfrage Bewertung zur Königin"><figcaption>Königin: Nur mit „Ja“ zählt die Durchsicht für sie.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="frage-honig" alt="Rückfrage Honig ins Lager"><figcaption>Honig: Die Menge ist vorbelegt. „Speichern“ bucht sie ins Lager.</figcaption></figure>
+</div>
+<div class="tipp">
+  <strong>Nichts geht verloren</strong>
+  Während du tippst, sichert das Gerät deine Eingaben laufend als Entwurf. Schließt du das Fenster aus Versehen, ist beim nächsten Öffnen alles wieder da.
+</div>
+<h3 id="funkloch">Speichern ohne Netz</h3>
+<p>Ist beim Speichern kein Netz da oder antwortet der Server nicht, legt die App die Durchsicht samt Fotos auf dem Handy ab. Du siehst kurz <em>Auf dem Handy gesichert</em>, tippst <span class="knopf">OK</span> und machst am nächsten Volk weiter. Sobald wieder Verbindung da ist, sendet die App alles von selbst, auch wenn du sie erst zu Hause wieder öffnest. Du musst nichts tun.</p>
+<p>Das gilt genauso für <strong>neue Maßnahmen</strong> und fürs <strong>Abhaken</strong>: Ohne Netz schließt das Fenster wie gewohnt, eine abgehakte Maßnahme verschwindet aus der Liste. Beides wartet auf dem Handy und geht raus, sobald Netz da ist. Als „erledigt am“ zählt der Moment, in dem du getippt hast.</p>
+<ul>
+  <li><strong>Leiste oben:</strong> etwa „Offline. 2 Durchsichten, 1 Haken warten.“, dann „werden gesendet …“ und zum Schluss kurz „Alles gesendet.“ Antippen zeigt, was noch wartet.</li>
+  <li><strong>Im Verlauf des Volks</strong> steht eine wartende Durchsicht oder Maßnahme als gestrichelte Karte „Wartet auf Senden“. Ist sie angekommen, wird daraus die normale Karte.</li>
+  <li><strong>Langsames Netz:</strong> Dauert das Speichern länger, erscheint <span class="knopf">Weitermachen, im Hintergrund senden</span>. Die Durchsicht ist dann schon gesichert.</li>
+  <li><strong>Abgemeldet:</strong> Ist deine Anmeldung abgelaufen, sagt die Leiste „Bitte anmelden“. Nach dem Anmelden geht alles raus.</li>
+  <li><strong>Nicht angenommen:</strong> Lehnt der Server eine Durchsicht ab, etwa weil das Volk inzwischen gelöscht ist, wird die Leiste rot. Du kannst sie <em>erneut senden</em>, <em>ins Formular holen</em> (Fotos dann neu wählen) oder <em>verwerfen</em>.</li>
+</ul>
+<p>Doppelt kommt nichts an: Hat der Server schon gespeichert und nur die Antwort ging im Funkloch verloren, erkennt er die Durchsicht wieder.</p>
+<h3>Einträge ansehen und korrigieren</h3>
+<p><span class="knopf">Durchsicht öffnen ›</span> an einer Durchsicht im Verlauf öffnet den Eintrag „Durchsicht vom …“. Er öffnet sich zunächst <strong>zum Lesen</strong>, damit du am Stand nichts aus Versehen verstellst. Zum Ändern legst du oben den Schalter auf <em>Bearbeiten</em> um. Dort kannst du auch Fotos ergänzen oder entfernen, Maßnahmen abhaken oder den Eintrag löschen. <span class="knopf">✕ Durchsicht schließen</span> oben links (und unten nochmal) bringt dich zurück zu genau dieser Karte im Verlauf.</p>
+<figure class="handy"><img data-bild="eintrag-lesen" alt="Eintrag ansehen mit Schalter Nur lesen"><figcaption>Der Eintrag ist erst gesperrt. Der Schalter oben gibt ihn frei.</figcaption></figure>
+<h3 id="sammel">Mehrere Völker auf einmal</h3>
+<p>Wenn du am Stand mehrere Völker gleich behandelt hast, zum Beispiel alle gefüttert oder bei allen eine Windel eingelegt, nimmst du die Knöpfe <span class="knopf">Durchsicht erfassen</span> und <span class="knopf">Maßnahme</span> auf der <strong>Seite des Stands</strong>.</p>
+<ol class="schritte">
+  <li>Völker antippen (der farbige Punkt ist die Zeichenfarbe der Königin) oder <span class="knopf">Alle wählen</span>. Oben siehst du, wie viele gewählt sind.</li>
+  <li><span class="knopf">Weiter</span>. Über <em>ändern</em> neben „Für: …“ kommst du zurück zur Auswahl, deine Eingaben bleiben dabei erhalten.</li>
+  <li>Durchsicht bzw. Maßnahme ausfüllen und speichern. Der Knopf sagt, wie viele Einträge entstehen.</li>
+</ol>
+<p>Jedes gewählte Volk bekommt einen eigenen, vollständigen Eintrag in seinem Verlauf bzw. eine eigene Maßnahme. Die Fragen „Bewertung zur Königin?“ und „Honig ins Lager?“ stellt die App nur bei einem einzelnen Volk, weil beides am einzelnen Volk hängt.</p>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-sammel-auswahl" alt="Auswahl der Völker am Stand"><figcaption>Auswahl am Stand.</figcaption></figure>
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-sammel-formular" alt="Durchsicht für Volk 2 und Volk 3"><figcaption>Eine Durchsicht „Für: Volk 2, Volk 3“, der Knopf sagt „2 Durchsichten speichern“.</figcaption></figure>
+  <figure class="breit" style="flex-basis:380px;max-width:520px"><img data-bild="d-sammel-massnahme" alt="Maßnahme für alle Völker des Stands"><figcaption>Eine Maßnahme für alle drei Völker.</figcaption></figure>
+</div>
+</section>
+
+<!-- 7 -->
+<section id="massnahmen">
+<h2><span class="nr">7</span>Maßnahmen und Kalender</h2>
+<p>Unter <strong>Maßnahmen</strong> steht alles, was zu tun ist, über alle Völker hinweg, offene oben, erledigte unten. Ein Haken links erledigt eine Maßnahme. Hast du dich vertippt, holt <span class="knopf">Rückgängig</span> in der Leiste, die ein paar Sekunden unten erscheint, sie zurück.</p>
+<ul>
+  <li><strong>Farben:</strong> Offene Maßnahmen sind Kärtchen mit Farbleiste links und Termin-Plakette, z.&nbsp;B. „Überfällig · 16.10.“, „Heute“ oder „Fr 23.10.“. Rot ist überfällig, gelb heute fällig, grün in den nächsten 7 Tagen. Später fällige bleiben grau.</li>
+  <li><strong>Sammelmaßnahmen</strong> (eine Maßnahme für mehrere Völker) stehen als eine Zeile, z.&nbsp;B. „3 Völker · Obstwiese · Fällig: 21.10.2026“. Die Zeile zeigt, wie viele schon erledigt sind („1/3 erledigt“). Ein Tipp klappt sie auf: Je Volk eine schmale Zeile mit Haken, Stift und Mülleimer, am Rechner in mehreren Spalten. Mit <span class="knopf">Alle 3 erledigt</span> hakst du alle auf einmal ab.</li>
+  <li><strong>Verfahren</strong> ohne Medikament (TBE, Bannwabe …) stehen hier nur, wenn du beim Verfahren <em>In Maßnahmen übernehmen</em> angehakt hast. Dann als eine Zeile mit dem nächsten Schritt und Termin. Aufgeklappt siehst du alle Schritte, <span class="knopf">Nächsten Schritt erledigt</span> hakt ihn ab.</li>
+  <li><strong>Kalender:</strong> Unter der Liste zeigt ein Monatskalender, an welchen Tagen Maßnahmen anstehen (rot überfällig, gelb heute, grün geplant). Der heutige Tag ist ein gefüllter Kreis. Am Rechner und Tablet siehst du zwei Monate nebeneinander, am Handy einen. Tippst du einen Tag an, zeigt die Liste nur dessen Maßnahmen.</li>
+</ul>
+<p>Mit <span class="knopf">+ Neue Maßnahme</span> öffnet sich ein Fenster: für <strong>einzelne Völker</strong> (antippen, mehrere möglich), einen <strong>ganzen Stand</strong> oder <strong>alle Stände</strong>. Unter <em>Standardarbeit</em> stehen häufige Arbeiten zur Auswahl (z.&nbsp;B. Mäusegitter, Einfüttern), oder du tippst frei ein und setzt einen Termin.</p>
+<figure class="schmal" style="max-width:440px"><img data-bild="massnahme-neu" alt="Fenster Neue Maßnahme"><figcaption>Eine Maßnahme für Volk 2 und Volk 3, fällig am 30.10.</figcaption></figure>
+<figure><img data-bild="massnahmen" alt="Maßnahmenübersicht mit Kalender"><figcaption>Maßnahmen: oben die offenen, die Futterkontrolle ist überfällig. Darunter der Kalender und die erledigten.</figcaption></figure>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="massnahmen-gruppe" alt="Aufgeklappte Sammelmaßnahme"><figcaption>Die Sammelmaßnahme „Varroa-Windel einlegen“ aufgeklappt.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-massnahmen" alt="Maßnahmen am Handy"><figcaption>Am Handy.</figcaption></figure>
+</div>
+<h3>Maßnahmen im eigenen Kalender</h3>
+<p>Unter <em>Einstellungen → Kalender-Abo</em> bekommst du eine persönliche Kalenderadresse. Abonnierst du sie im Kalender von iPhone, iPad oder Rechner, erscheinen alle offenen Maßnahmen mit Termin dort, samt Erinnerung, ohne dass du die App öffnen musst. Die genaue Anleitung fürs iPhone steht auf der Seite zum Aufklappen. Erinnerungszeit, Farbe und Titel der Termine stellst du darunter ein.</p>
+<figure class="schmal"><img data-bild="kalender" alt="Einstellungen für das Kalender-Abo"><figcaption>Kalender-Abo einrichten. Die Adresse ist persönlich, gib sie nicht weiter. Mit <em>Neue Adresse erzeugen</em> machst du eine bekannt gewordene Adresse ungültig.</figcaption></figure>
+</section>
+
+<!-- 8 -->
+<section id="koeniginnen">
+<h2><span class="nr">8</span>Königinnen</h2>
+<p>Der Bereich hat zwei Reiter: <strong>Bestand</strong> (alle Königinnen) und <strong>Zucht</strong> (Zuchtserien, siehe <a href="#zucht">Zucht</a>).</p>
+<h3>Bestand</h3>
+<p>Die Liste ist nach Ständen gruppiert; Königinnen ohne Volk (Reserve, Ableger, im Käfig) und nicht mehr vorhandene stehen am Ende. Das farbige Quadrat zeigt Zeichenfarbe und Jahrgang. Mit Suche und Filtern (Stand, Jahrgang, Begattung) findest du schnell die richtige, mit <em>Liste / Kacheln</em> wechselst du die Ansicht. Den gelben <strong>Stern</strong> setzt du selbst auf der Seite einer Königin, um herausragende Tiere zu markieren.</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="koeniginnen" alt="Königinnenbestand"><figcaption>Die drei Königinnen des Beispielstands.</figcaption></figure>
+  <figure class="handy"><img data-bild="handy-koeniginnen" alt="Königinnen am Handy"><figcaption>Am Handy: Filter als Chips, <em>+ Königin</em> als schwebender Knopf.</figcaption></figure>
+</div>
+<h3>Neue Königin</h3>
+<p><span class="knopf">+ Neue Königin</span>. Eine Kennung wird vorgeschlagen. Dazu kommen Jahrgang und Zeichen (die Farbe richtet sich nach dem Jahrgang), Herkunft (eigene Nachzucht, Nachschaffung, Schwarm, Zukauf), Mutter, Begattung (Belegstelle, Standbegattung, künstliche Besamung) und das Volk, in das sie kommt. Belegstellen legst du einmal unter <em>Einstellungen → Belegstellen</em> an, dort auch die Drohnenvölker je Jahr.</p>
+<figure><img data-bild="koenigin-neu" alt="Formular Neue Königin"><figcaption>Neue Königin anlegen.</figcaption></figure>
+<h3>Seite einer Königin</h3>
+<ul>
+  <li><strong>Stammdaten</strong> und darunter die <strong>Bewertung</strong>: der Schnitt aller übernommenen Durchsichten je Kriterium als Note (1 ist die beste), eine Gesamtnote, dazu Honigertrag und Brutwaben. Nur hier bei den Königinnen stehen Noten, damit sich Königinnen vergleichen lassen; auf Stockkarte und Stand siehst du die Wertungstexte.</li>
+  <li><strong>Abstammung</strong> mit <em>Mutterseite</em> und <em>Vaterseite</em>, dazu die Töchter. Die Vaterseite zeigt bei Belegstellen-Begattung die Belegstelle, das Belegjahr und die Drohnenvölker, die dort in diesem Jahr standen. Bei künstlicher Besamung die Vaterlinie, bei Standbegattung „Drohnen unbekannt“. Das Belegjahr ist das Jahr von „Begattung von“, sonst der Jahrgang. <em>Ganzer Stammbaum</em> zeigt alle Linien, jede Königin mit „♂ Belegstelle Jahr“.</li>
+  <li><strong>Lebenslauf</strong>: Schlupf, Belegstelle, Zusetzen, Entnehmen, Verkauf, Tod und Bewertungen. Einzelne Kriterien einer Bewertung kannst du abhaken, wenn sie verfälscht waren.</li>
+  <li><strong>Zuchtkarte</strong>: einmal erstellen (die Vaterseite ist mit den Drohnenvölkern vorbelegt), bei Bedarf anpassen und drucken (mehrere Karten auf einem Bogen über <em>Dokumente → Zuchtkarten drucken</em>).</li>
+</ul>
+<figure class="schmal" style="max-width:440px"><img data-bild="koenigin-lebenslauf" alt="Lebenslauf mit Ereignis In ein Volk zugesetzt"><figcaption>Lebenslauf: Ereignis, Datum und Volk wählen. Sitzt dort schon eine Königin, kommt sie in die Reserve.</figcaption></figure>
+<figure><img data-bild="koenigin" alt="Seite einer Königin mit Stammdaten und Bewertung"><figcaption>Die Königin aus Volk 1 mit Stern, Bewertung und Abstammung mit Vaterseite.</figcaption></figure>
+<figure><img data-bild="stammbaum" alt="Stammbaum"><figcaption>Der Stammbaum über alle Generationen. ♂ zeigt Belegstelle und Belegjahr.</figcaption></figure>
+</section>
+
+<!-- 9 -->
+<section id="zucht">
+<h2><span class="nr">9</span>Zucht</h2>
+<p>Unter <em>Königinnen → Zucht</em> planst du Zuchtserien. Bei <span class="knopf">+ Neue Serie</span> wählst du Zuchtmutter, Zuchtvolk, Pflegeverfahren (z.&nbsp;B. weiselloses Pflegevolk, Starter/Finisher, Brutschrank), Pflegevolk, Umlarvtag und die geplante Begattung.</p>
+<figure><img data-bild="zucht-neu" alt="Neue Zuchtserie"><figcaption>Neue Zuchtserie: die Zuchtmutter mit ihren Noten auswählen.</figcaption></figure>
+<p>Aus dem Umlarvtag errechnet die App den ganzen <strong>Zeitplan</strong>: Pflegevolk vorbereiten, Annahme kontrollieren, verschulen, Schlupf, Begattung, Eilage. Jeder Schritt erscheint als Maßnahme beim jeweiligen Volk und auf Wunsch im Kalender-Abo. Rechts trägst du die <strong>Zahlen</strong> nach (umgelarvt, angenommen, verdeckelt, geschlüpft). Nach dem Schlupf legst du unten die <strong>nachgezogenen Königinnen</strong> in einem Rutsch an, Mutter und Jahrgang sind dann schon eingetragen.</p>
+<figure><img data-bild="serie" alt="Zuchtserie mit Zeitplan"><figcaption>Eine Zuchtserie mit Überblick, Zahlen und Zeitplan.</figcaption></figure>
+</section>
+
+<!-- 10 -->
+<section id="behandlungen">
+<h2><span class="nr">10</span>Behandlungen (Bestandsbuch)</h2>
+<p>Hier dokumentierst du die Anwendung von Tierarzneimitteln, so wie es das Bestandsbuch verlangt.</p>
+<ol class="schritte">
+  <li><strong>Medikament anlegen</strong> (<span class="knopf">Medikamente</span> → <em>Medikament anlegen</em>): Name, Wirkstoff, Zulassungsnummer, Wartezeit, Charge, Verfallsdatum. <strong>Lieferant und Belegnummer</strong> sind Pflicht. Für die gängigen Varroa-Mittel gibt es <strong>Vorlagen</strong>: Unter <em>Gängige Mittel als Vorlage</em> tippst du beim Mittel auf <span class="knopf">Aktivieren</span>. Name, Wirkstoff, Einheit und Wartezeit sind dann schon ausgefüllt. Du trägst nur noch deine Packung ein: Lieferant, Belegnummer, Kaufdatum und Charge. Diese vier sind bei einer Vorlage Pflicht. Gleiche die Angaben kurz mit der Packung ab. Lade die Rechnung oder Verschreibung als <strong>Erwerbsbeleg</strong> hoch, sie gehört zum Nachweis. Fehlt etwas, zeigt die App das beim Medikament und oben in der Übersicht an.</li>
+  <li><strong>Behandlung erfassen</strong> (<span class="knopf">+ Neue Behandlung</span>, oder auf der Volk-Seite <span class="knopf">Behandlung</span>). Oben steht der Umschalter <em>Mit Medikament | Ohne Medikament</em>. Mit Medikament: Medikament, behandelt gegen (z.&nbsp;B. Varroose), Völker (einzeln oder ganzer Stand), Datum, bei Langzeitverdunstern das Ende, Menge je Volk (Komma erlaubt) und Anwender. Die App nennt dir den Tag, ab dem frühestens wieder Honig entnommen werden darf.</li>
+  <li><strong>Nachweis als PDF</strong>: Jahr und Umfang wählen, <span class="knopf">PDF erstellen</span>. Die Datei bleibt gespeichert und lässt sich jederzeit wieder herunterladen oder verschicken.</li>
+</ol>
+<p>Die dokumentierten Behandlungen sind nach Jahren in Reitern sortiert. Jede Behandlung erscheint außerdem im Verlauf der behandelten Völker.</p>
+<h3>Verfahren ohne Medikament</h3>
+<p>Bei <em>Ohne Medikament</em> wählst du ein Verfahren: <strong>Totale Brutentnahme (TBE)</strong>, <strong>Teil-Brutentnahme</strong>, <strong>Bannwabenverfahren</strong>, <strong>Königin käfigen</strong> oder <strong>Sonstiges</strong>. Dazu Völker und Beginn. Menge und Wartezeit entfallen, ins Bestandsbuch kommt es nicht.</p>
+<ul>
+  <li><strong>Fahrplan:</strong> Aus dem Beginn rechnet die App alle Schritte mit Tag und Termin, etwa Brut entnehmen, Befall kontrollieren oder die Oxalsäure-Behandlung danach.</li>
+  <li><strong>Bannwabe:</strong> Unter <em>Ablauf</em> wählst du 3 × 9 Tage (LWG Bayern, Vorgabe), 3 × 7 Tage (apisuisse), 4 × 7 Tage oder 2 × 12 Tage als Doppeltasche (12/24).</li>
+  <li><strong>In Maßnahmen übernehmen:</strong> Angehakt stehen die Schritte auch unter <a href="#massnahmen">Maßnahmen</a>, im Kalender und im Kalender-Abo. Sonst nur beim Verfahren und im Verlauf am Volk.</li>
+  <li><strong>Seite des Verfahrens:</strong> Fahrplan mit Haken je Schritt, für alle Völker auf einmal. Beim Medikamenten-Schritt öffnet <span class="knopf">Behandlung eintragen</span> das Formular schon ausgefüllt und hakt den Schritt danach ab. <em>Bearbeiten</em> verschiebt die offenen Termine mit.</li>
+</ul>
+<p>Verfahren stehen in der Liste unter Behandlungen und im Verlauf der Völker. Käfigen und Bannwabe trägt die App auch in den Lebenslauf der Königin ein.</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="behandlung-bio" alt="Neue Behandlung ohne Medikament"><figcaption>Bannwabenverfahren für Volk 2 und Volk 3 mit Fahrplan. Erledigte Schritte hakst du gleich mit ab.</figcaption></figure>
+  <figure class="breit"><img data-bild="verfahren" alt="Seite eines Verfahrens"><figcaption>Die Seite des Verfahrens mit allen Schritten.</figcaption></figure>
+</div>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="medikamente" alt="Medikamentenliste"><figcaption>Medikamente: bei den Beispielmedikamenten fehlt der Beleg.</figcaption></figure>
+  <figure class="breit"><img data-bild="medikament-neu" alt="Formular Medikament anlegen"><figcaption>Medikament anlegen. Lieferant und Belegnummer sind Pflicht.</figcaption></figure>
+</div>
+<figure><img data-bild="behandlung-neu" alt="Neue Behandlung"><figcaption>Neue Behandlung. Oben der Umschalter Mit/Ohne Medikament.</figcaption></figure>
+<figure><img data-bild="behandlungen" alt="Übersicht Behandlungen mit PDF-Export"><figcaption>Übersicht: Hinweise auf fehlende Angaben, PDF-Nachweis und die Ameisensäure-Behandlung des Beispielstands.</figcaption></figure>
+<figure><img data-bild="nachweis" alt="Vorschau des Behandlungsnachweises"><figcaption>Der Nachweis in der Vorschau: oben die Übersicht je Volk, darunter jede Anwendung einzeln.</figcaption></figure>
+<div class="tipp"><strong>Stornieren statt löschen</strong>Eine falsch erfasste Behandlung wird storniert (mit Grund), nicht gelöscht. So bleibt der Nachweis lückenlos. Stornierte Behandlungen erscheinen nicht mehr im Verlauf des Volkes, wohl aber im Bestandsbuch.</div>
+</section>
+
+<!-- 11 -->
+<section id="dokumente">
+<h2><span class="nr">11</span>Dokumente</h2>
+<p>Bilder und PDFs mit Kategorie (Gesundheitszeugnis, Rechnung, Vertrag, Versicherung, Genehmigung, Anleitung, Sonstiges oder eigene). Beim Hochladen kannst du ein Dokument mit einem Stand, einer Königin und/oder mehreren Völkern verknüpfen. Es erscheint dann zusätzlich dort. Die Liste lässt sich durchsuchen und nach Kategorie filtern. Hier liegen auch die erzeugten Behandlungsnachweise, die Lagerlisten, die Medikamenten-Belege und der Druck der Zuchtkarten.</p>
+<p><strong>Per E-Mail senden:</strong> Hast du unter <em>Einstellungen → E-Mail-Versand</em> dein Postfach eingerichtet, bekommt jede Zeile ein Kästchen. Wähle die Dokumente aus und tippe auf <span class="knopf">Per E-Mail senden</span>: Empfänger, Betreff und Text eintragen, auf Wunsch eine Kopie an dich. Die Dateien hängt die App selbst an.</p>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="dokument-neu" alt="Dokument hochladen"><figcaption>Dokument hochladen und mit dem Stand verknüpfen.</figcaption></figure>
+  <figure class="breit"><img data-bild="dokumente" alt="Dokumentenliste"><figcaption>Die Dokumentenliste.</figcaption></figure>
+</div>
+</section>
+
+<!-- 12 -->
+<section id="lager">
+<h2><span class="nr">12</span>Lager</h2>
+<p>Tippst du im Menü auf <em>Lager</em>, klappt darunter eine Auswahl auf: <em>Material</em> oder <em>Erzeugnisse</em>. Am Rechner klappt „Lager“ in der Seitenleiste auf und bleibt offen, solange du im Lager bist. Oben auf beiden Seiten wechselst du mit dem Umschalter direkt zur anderen.</p>
+<p><strong>Material:</strong> Bei den Zargen trägst du den Gesamtbestand ein. Wie viele davon im Einsatz sind, rechnet die App selbst aus Bruträumen und aufgesetzten Honigräumen aus. Genauso bei den <strong>Klimadeckeln</strong>: Gesamtbestand eintragen, „im Einsatz“ zählt die Völker, denen du den Deckel zugeordnet hast. Sonstiges Material (Mittelwände, Futter, Gläser …) legst du frei mit Menge, Einheit und Lagerort an.</p>
+<h3>Erzeugnisse</h3>
+<p>Je Erzeugnis gibt es einen Chip: Honig, Wachs, Propolis, Pollen und eigene. Darunter steht der Bestand als Liste. Ein Posten ist ein Gebinde mit Sorte, Zustand und Lagerort, z.&nbsp;B. „Eimer 25 kg · Frühtracht · 2 Stück“. Was nicht in einem Gebinde liegt, steht als lose Menge darunter: bei kg und g als „Gewicht“, bei Stück oder Liter als „Menge“. Stückzahlen zeigt die App ohne Komma.</p>
+<p><strong>Sortieren:</strong> Ab zwei Posten wählst du neben dem Einlagern-Knopf <em>Sortieren nach Sorte | Gebinde</em>. Je Gruppe steht eine Zwischenzeile mit der Summe. Nach Gebinde kommen Eimer, Gläser, Sonstige und zuletzt die lose Menge. Jedes Gerät merkt sich deine Wahl.</p>
+<ol class="schritte">
+  <li><strong>Einlagern:</strong> <span class="knopf">+ Honig einlagern</span> tippen. Oben <em>Eimer</em>, <em>Gläser</em> oder <em>Gewicht</em> antippen, darunter die Größe. Fehlt eine Größe, legst du sie mit „+ Größe“ an, z.&nbsp;B. „400 g“. Dann Anzahl, Sorte, Lagerort und Grund (Ernte, Zukauf, Bestandskorrektur, Sonstiges) wählen. Der Lagerort ist mit dem vom letzten Mal vorbelegt. Zustand, Datum und Notiz stehen unter „Weitere Angaben“.</li>
+  <li><strong>Auslagern:</strong> Beim Posten auf <span class="knopf">Auslagern</span> tippen. Anzahl und Grund wählen, fertig. Mehr als vorhanden geht nicht.</li>
+  <li><strong>Abfüllen:</strong> Beim Posten, aus dem du abfüllst, auf <span class="knopf">Auslagern</span> tippen und den Grund <em>Abfüllen</em> wählen. Mit + zählst du die gefüllten Gläser. Die App bucht sie ein. Ein angebrochener Rest bleibt unter „Gewicht“ stehen.</li>
+</ol>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="lager-einlagern" alt="Fenster Honig einlagern"><figcaption>Einlagern: 2 Eimer Frühtracht aus der Ernte, in den Keller.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="lager-auslagern" alt="Fenster Auslagern"><figcaption>Auslagern: 4 Gläser verkauft. Unten steht, was übrig bleibt.</figcaption></figure>
+  <figure class="breit" style="flex-basis:240px;max-width:360px"><img data-bild="lager-abfuellen" alt="Fenster Abfüllen in Gläser"><figcaption>Abfüllen: 12 Gläser aus einem Eimer. Die App rechnet den Rest aus.</figcaption></figure>
+</div>
+<p>Honig aus einer Ernte musst du nicht von Hand buchen. Die Durchsicht fragt beim Speichern danach. Ein eigenes Erzeugnis legst du mit <span class="knopf">+ Neu</span> am Ende der Chips an (Name und Einheit kg, g, Stück oder Liter). Eigene Erzeugnisse lassen sich darunter umbenennen und löschen, löschen aber nur ohne Bestand. Honig, Wachs, Propolis und Pollen bleiben fest. Sorten, Gebinde, Preise und den Schalter „Eimer einzeln wiegen“ findest du unter <em>Einstellungen → Lager</em>.</p>
+<p><strong>Eimer einzeln wiegen:</strong> Ist der Schalter an, fragt das Einlagern je Eimer nach dem echten Gewicht (leer = Nennwert). Jeder Eimer bekommt eine Nummer. Die Liste zeigt Anzahl und echtes Gewicht, <span class="knopf">Gewichte</span> klappt die einzelnen Eimer auf. Ältere Eimer ohne Gewicht wiegst du dort mit <span class="knopf">Nachwiegen</span> nach. Beim Auslagern und Abfüllen hakst du an, welche Eimer es sind. Abfüllen schlägt Gläser der größten Größe vor. Der Rest bleibt im Eimer, kommt unter „Gewicht“ oder wird als Schwund ausgebucht. Gläser zählen immer nach Nennwert.</p>
+<p><strong>Warenwert:</strong> Schaltest du unter <em>Einstellungen → Lager</em> den Warenwert an, zeigt jeder Posten seinen Wert, z.&nbsp;B. „50 × 4,50 € = 225,00 €“. Die Zwischenzeilen tragen die Summe, darunter steht der Wert des Erzeugnisses und aller Erzeugnisse. Posten ohne Preis zählen nicht mit, ein Hinweis sagt das. Beim Einlagern steht dann ein Feld <em>Preis je Stück</em> bzw. <em>Preis je kg</em>, vorbelegt aus der Preisliste. Änderst du ihn, ändert sich die Preisliste für diese Sorte und Größe.</p>
+<p><strong>Lagerlisten:</strong> <span class="knopf">PDF erstellen</span> neben Material bzw. Bestand erzeugt eine Bestandsliste mit Lagerorten und dem, was gerade an den Völkern im Einsatz ist. Mit Warenwert kommen Preis und Wert dazu, bei Honig eine Tabelle „Warenwert nach Sorte“. Bei Einzelgewichten stehen die Eimer einzeln darunter. <strong>Buchungen als PDF</strong> unten bei den Erzeugnis-Lagerlisten: Zeitraum (Vorgabe 1.1. bis heute) und Erzeugnis wählen. Das PDF zeigt Anfang, Zugänge, Abgänge und Ende, dazu jede Buchung, älteste zuerst. Alle PDFs liegen unten auf der jeweiligen Lager-Seite und unter Dokumente.</p>
+<figure><img data-bild="lager" alt="Lager, Erzeugnisse"><figcaption>Erzeugnisse mit eingeschaltetem Warenwert, nach Sorte sortiert: je Posten Anzahl × Preis, unten die Summe.</figcaption></figure>
+<figure><img data-bild="lager-material" alt="Lager, Material"><figcaption>Material: Zargen mit „im Einsatz“ und „verfügbar“, Klimadeckel, sonstiges Material.</figcaption></figure>
+</section>
+
+<!-- 13 -->
+<section id="qr">
+<h2><span class="nr">13</span>QR-Codes und Scannen</h2>
+<p>Mit einem QR-Aufkleber an jeder Beute öffnest du am Stand per Scan sofort die richtige Stockkarte.</p>
+<ol class="schritte">
+  <li><strong>Codes erzeugen:</strong> <em>Einstellungen → QR-Codes</em>, Anzahl wählen, PDF-Bogen öffnen und über den Drucken-Befehl des Browsers drucken. Fertige QR-Karten aus dem Handel funktionieren ebenso.</li>
+  <li><strong>Anlernen:</strong> Auf der Volk-Seite den Knopf <span class="knopf">QR-Code</span> tippen und den Aufkleber scannen. Gehört der Code schon zu einem anderen Volk, fragt die App nach. Danach trägt das Volk die Plakette <em>QR gelernt</em>.</li>
+  <li><strong>Ändern oder entfernen:</strong> Ist schon ein Code angelernt, öffnet derselbe Knopf <em>QR-Code bearbeiten</em>. <span class="knopf">Neuen anlernen</span> ersetzt den alten Code, <span class="knopf">Code löschen</span> trennt ihn nach einer Rückfrage vom Volk.</li>
+  <li><strong>Scannen:</strong> Menüpunkt <em>Scannen</em> öffnet die Kamera und springt zur Stockkarte. Selbst erzeugte Codes funktionieren auch mit der normalen Kamera-App des Handys.</li>
+</ol>
+<div class="hinweis">
+  <strong>Kamera fragt jedes Mal?</strong>
+  Safari am iPhone und iPad fragt ab Werk bei jedem Scan neu nach der Kamera. Dauerhaft erlaubst du sie in der <em>Einstellungen</em>-App des iPhones unter <em>Apps → Safari → Kamera → Erlauben</em>. Das gilt auch, wenn du die Imkereiverwaltung vom Home-Bildschirm startest. Solange die Kamera nicht dauerhaft erlaubt ist, zeigt die App unter dem Kamerabild einen Hinweis für dein Gerät.
+</div>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="qr-codes" alt="QR-Codes erzeugen"><figcaption>QR-Codes als Druckbogen erzeugen.</figcaption></figure>
+  <figure class="breit"><img data-bild="scannen" alt="Scannen-Seite"><figcaption>Scannen (in der Anleitung ohne Kamerabild).</figcaption></figure>
+</div>
+<figure class="schmal" style="max-width:420px"><img data-bild="d-volk-qr" alt="Fenster QR-Code bearbeiten"><figcaption>QR-Code bearbeiten bei einem Volk mit angelerntem Code.</figcaption></figure>
+</section>
+
+<!-- 14 -->
+<section id="velutina">
+<h2><span class="nr">14</span>Velutina: Asiatische Hornisse</h2>
+<p>Der Bereich hat zwei Reiter: <strong>Meldungen</strong> und <strong>Nestsuche</strong>.</p>
+<h3>Meldungen (nur Baden-Württemberg)</h3>
+<p>Die App holt alle paar Stunden die geprüften Fundmeldungen der Asiatischen Hornisse aus der Fundortkarte der LUBW (Landesanstalt für Umwelt Baden-Württemberg). Solche Daten gibt es nur für Baden-Württemberg. Trag deshalb unter <em>Einstellungen → Bienenhalter</em> dein Bundesland ein: Liegt dein Betrieb in einem anderen Land, blendet die App Karte und Warnungen aus, die Nestsuche bleibt.</p>
+<ul>
+  <li><strong>Karte:</strong> Nester und Einzeltiere der Saison, deine Stände, um jeden Stand ein roter <strong>Akutbereich</strong> (Vorgabe 2 km) und ein gelber <strong>Warnbereich</strong> (Vorgabe 5 km). Beide stellst du mit den Schiebern über der Karte ein.</li>
+  <li><strong>Warnungen:</strong> Taucht eine <em>neue</em> Meldung in einem Bereich auf, erscheint eine Zahl am Menüpunkt und ein roter bzw. gelber Kasten auf der Startseite. Auf jeder Stand-Seite zeigt der Kasten <em>Asiatische Hornisse</em>, wie es um diesen Stand steht. Mit eingerichteter E-Mail bekommst du neue Meldungen auch per Mail.</li>
+</ul>
+<figure><img data-bild="velutina" alt="Velutina-Karte mit Akut- und Warnbereich"><figcaption>Meldungen: Akut- und Warnbereich um den Beispielstand (in der Anleitung ohne Kartenhintergrund und ohne Meldungen).</figcaption></figure>
+<h3>Nestsuche per Locktopf</h3>
+<p>Für die Suche nach einem Nest legst du eine <span class="knopf">Neue Nestsuche</span> an und setzt <strong>Locktöpfe</strong> auf die Karte, per Antippen oder per GPS an deinem Standort. Je Locktopf markierst du Hornissen mit einer Farbe und hältst fest:</p>
+<ul>
+  <li>die <strong>Abflugrichtung</strong>, per Antippen eines Punkts auf der Karte, mit dem Schieber oder mit dem Kompass des Handys;</li>
+  <li>die <strong>Rundzeiten</strong> mit der Stoppuhr (<span class="knopf">Abflug</span> und <span class="knopf">Zurück</span>), am besten drei bis fünf Runden. Aus der kürzesten Zeit schätzt die App die Entfernung zum Nest. Mit <span class="knopf">+ Zeit</span> trägst du eine Zeit von Hand nach.</li>
+</ul>
+<p>Auf der Karte erscheint je Hornisse ein Flugkorridor. Mit Peilungen aus verschiedenen Richtungen grenzt die App einen <strong>Vermutungsbereich</strong> ein (rot, wo sich alle schneiden), mit Link zu Google Maps. <em>Karte drehen</em> richtet die Karte am Handy nach dem Kompass aus. Ist das Nest gefunden, setzt du den Fundort und schließt die Suche ab; abgeschlossene Suchen lassen sich archivieren und stehen dann nach Jahr im <em>Archiv</em>.</p>
+<figure><img data-bild="nestsuche-peilung" alt="Nestsuche mit zwei Locktöpfen und Vermutungsbereich"><figcaption>Zwei Locktöpfe mit je einer Peilung. Wo sich die Bereiche schneiden, liegt vermutlich das Nest (rotes Kreuz). Unter der Karte steht, wie groß der Bereich ist.</figcaption></figure>
+<figure><img data-bild="nestsuche" alt="Nestsuche, Übersicht"><figcaption>Nestsuche: neue Suche anlegen, darunter laufende Suchen und eine kurze Anleitung.</figcaption></figure>
+</section>
+
+<!-- 15 -->
+<section id="einstellungen">
+<h2><span class="nr">15</span>Einstellungen im Überblick</h2>
+<p>Die Einstellungen sind in vier Gruppen sortiert: <em>Betrieb</em>, <em>Ausstattung</em>, <em>Verbindungen</em> und (nur beim Inhaber) <em>Nur für dich</em>. Am Handy siehst du sie als Liste, jede Zeile zeigt kurz, wie es steht. Tippen öffnet den Punkt, <span class="knopf">← Zurück</span> führt wieder zur Liste. Am PC und am iPad quer stehen alle Punkte links in einer Spalte, rechts der geöffnete Punkt.</p>
+<ul>
+  <li><strong>Bienenhalter:</strong> Name, Anschrift, Bundesland, Telefon, E-Mail, Registriernummer, für den Behandlungsnachweis und die Hornissen-Meldungen. Dazu <em>Name im Menü</em> (höchstens 30 Zeichen), leer steht dort „Imkereiverwaltung“.</li>
+  <li><strong>Bereiche:</strong> Schalter für Scannen, Königinnen (mit Zucht), Behandlungen, Dokumente, Lager und Velutina. Was du ausschaltest, verschwindet aus Menü und Seiten; die Daten bleiben und sind nach dem Einschalten wieder da. Bienenstände, Maßnahmen und Einstellungen sind immer an.</li>
+  <li><strong>Design:</strong> wie die App aussieht. <em>Wiese</em> hell in Grün und Honiggelb mit Seitenleiste, <em>Wald</em> warm in Waldgrün und Honig mit Leiste unten am Handy, <em>Bergsee</em> kühl in Petrol mit dunklem Band oben. Die Wahl gilt nur auf dem Gerät, auf dem du sie triffst. Hell und dunkel stellst du im Menü um.</li>
+  <li><strong>E-Mail-Versand:</strong> dein Postfach für den Versand von Dokumenten und Hornissen-Warnungen. <span class="knopf">Speichern und Testmail senden</span> prüft die Angaben. Das <em>i</em> neben der Überschrift erklärt, welche Angaben Gmail, GMX, WEB.DE, T-Online, iCloud und Outlook brauchen (bei Gmail ein eigenes App-Passwort).</li>
+  <li><strong>Beutensysteme:</strong> Zargen für Bruträume und Honigräume, siehe <a href="#beispiel">Erste Schritte</a>.</li>
+  <li><strong>Belegstellen:</strong> einmal anlegen (Ort, Rasse), dann bei Königinnen und Zuchtserien auswählbar. Weil die Drohnenvölker jedes Jahr wechseln, führt jede Belegstelle eine Liste <em>Drohnenvölker je Jahr</em>. Mit <span class="knopf">Jahr eintragen</span> kommt ein Jahr dazu, aufgeklappt änderst oder entfernst du es. Die Liste zeigt auch, wie viele Königinnen je Jahr dort begattet wurden.</li>
+  <li><strong>Lager:</strong> je Erzeugnis die Sorten und Gebinde (Eimer, Gläser, Sonstige), bei Honig der Schalter „Eimer einzeln wiegen“ (echtes Gewicht je Eimer, z.&nbsp;B. für die Bio-Kontrolle). Ganz unten in der Karte steht der Schalter <em>Warenwert anzeigen</em> (Vorgabe aus, gilt für alle Erzeugnisse). Bei „an“ klappt darunter die Preisliste auf: <em>Standard</em> für Sorten ohne eigenen Preis, dazu je Sorte aufklappbar ein Preis je Stück für jedes Glas und ein Preis je kg für Eimer und lose Menge. Eimer rechnen immer je kg. Ganz unten die Lagerorte, nur nötig, wenn du an mehreren Orten lagerst.</li>
+  <li><strong>QR-Codes</strong> und <strong>Kalender-Abo</strong>, siehe oben.</li>
+  <li><strong>Helfer:</strong> Zugänge für Familie oder Mitimker, mit Lese- oder Schreibrecht, siehe <a href="#zugang">Helfer einladen</a>.</li>
+  <li><strong>Historie:</strong> wer wann was angelegt oder geändert hat.</li>
+  <li><strong>System:</strong> Version der App, Update-Prüfung ein oder aus, <em>Was ist neu?</em> und <span class="knopf">Update einspielen</span>.</li>
+</ul>
+<div class="nebeneinander">
+  <figure class="breit" style="flex-basis:300px;max-width:440px"><img data-bild="einstellungen-bereiche" alt="Bereiche ein- und ausschalten"><figcaption>Bereiche: Haken weg, dann verschwindet der Bereich aus dem Menü. Die Daten bleiben.</figcaption></figure>
+  <figure class="breit"><img data-bild="einstellungen" alt="Einstellungen"><figcaption>Bienenhalter in den Einstellungen. Links alle Punkte in vier Gruppen.</figcaption></figure>
+  <figure class="breit"><img data-bild="belegstellen" alt="Belegstellen verwalten"><figcaption>Belegstellen mit den Drohnenvölkern je Jahr.</figcaption></figure>
+</div>
+<div class="nebeneinander">
+  <figure class="breit"><img data-bild="einstellungen-lager" alt="Einstellungen Lager"><figcaption>Lager: Sorten, Gebinde, „Eimer einzeln wiegen“ und unten der Warenwert.</figcaption></figure>
+  <figure class="breit" style="flex-basis:300px;max-width:520px"><img data-bild="einstellungen-preise" alt="Preisliste je Sorte"><figcaption>Preisliste: Frühtracht aufgeklappt, je Glas ein Preis je Stück.</figcaption></figure>
+</div>
+</section>
+
+<!-- 16 -->
+<section id="fragen">
+<h2><span class="nr">16</span>Tipps und häufige Fragen</h2>
+<h3>Muss ich jede Durchsicht vollständig ausfüllen?</h3>
+<p>Nein. Trag ein, was du gesehen hast, alles andere bleibt leer. Eine Durchsicht mit nur einer Notiz ist völlig in Ordnung.</p>
+<h3>Ich habe alle Völker eines Stands gefüttert. Muss ich das für jedes Volk eintragen?</h3>
+<p>Nein. Nimm auf der Seite des Stands den Knopf <em>Durchsicht erfassen</em>, wähle <em>Alle wählen</em> und trag die Fütterung einmal ein. Jedes Volk bekommt seinen eigenen Eintrag (siehe <a href="#sammel">Mehrere Völker auf einmal</a>).</p>
+<h3>Was bedeuten die Farben bei den Bewertungen?</h3>
+<p>Grün ist unauffällig, gelb verdient einen Blick, rot ist kritisch, etwa ein schwaches Volk, wenig Futter, starker Schwarmtrieb oder Varroa über der Schadschwelle. Es ist ein Hinweis, keine Pflichtaufgabe. Bei roten Werten bietet die App beim Speichern an, gleich eine Maßnahme anzulegen.</p>
+<h3>Ein Volk ist eingegangen. Löschen?</h3>
+<p>Besser den Status auf <em>verloren</em> setzen oder das Volk archivieren. So bleibt die Geschichte erhalten, etwa für den Behandlungsnachweis oder die Bewertung der Königin.</p>
+<h3>Die Königin wurde getauscht. Was tun?</h3>
+<p>Auf der Seite des Volks in der Königin-Zeile <span class="knopf">Umweiseln</span> tippen. Dort wählst du die neue Königin und was mit der alten geschieht (abgedrückt, Reserve, verkauft, verschwunden). Beide Lebensläufe trägt die App ein (siehe <a href="#voelker">Umweiseln</a>).</p>
+<h3>Funktioniert die App ohne Netz am Stand?</h3>
+<p>Durchsichten, neue Maßnahmen und Haken ja: Ohne Netz legt die App sie auf dem Handy ab und sendet sie von selbst, sobald wieder Verbindung da ist (siehe <a href="#funkloch">Speichern ohne Netz</a>). Die App muss dafür aber schon offen sein. Neu laden lässt sie sich im Funkloch nicht.</p>
+<h3>Ich brauche die Zucht (oder das Lager) nicht.</h3>
+<p>Unter <em>Einstellungen → Bereiche</em> ausschalten. Menü und Seiten werden dadurch übersichtlicher, und du kannst den Bereich jederzeit wieder einschalten.</p>
+<h3>Ich habe etwas gefunden, das nicht funktioniert.</h3>
+<p>Melde es als <a href="https://github.com/frawoer79/Imkerei_Verwaltung/issues">Issue auf GitHub</a>, am besten mit einem Screenshot und einer kurzen Beschreibung, was du gemacht hast. Im Testzugang sagst du einfach dem Betreiber Bescheid, der dich eingeladen hat.</p>
+<h3>Wie komme ich an neue Versionen?</h3>
+<p>Gibt es eine neue Version, zeigt die App dem Hauptzugang oben ein Band. Unter <em>Einstellungen → System</em> steht, was neu ist, und <span class="knopf">Update einspielen</span> holt sie. Vorher sichert der Server die Datenbank, und klappt etwas nicht, geht er von selbst auf die alte Version zurück.</p>
+<p style="margin-top:28px"><a class="zurueck" href="#start">↑ nach oben</a></p>
+</section>
+</main>
+</div>
+</body>
+</html>

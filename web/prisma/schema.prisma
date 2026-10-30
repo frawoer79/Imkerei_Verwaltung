@@ -1,0 +1,1771 @@
+// Prisma-Schema: definiert die Datenbank-Struktur.
+// Nach jeder Änderung hier: `npx prisma migrate dev --name <kurze-beschreibung>`
+// erzeugt eine Migration und wendet sie auf die Datenbank an.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Ein Bienenstand: ein Standort, an dem mehrere Völker stehen.
+model Bienenstand {
+  id          String   @id @default(cuid())
+  name        String
+  /// Straße + Hausnummer, z.B. "Musterweg 3".
+  strasse     String?
+  /// PLZ + Ort, z.B. "12345 Musterstadt".
+  ort         String?
+  /// Koordinaten des Standorts (z.B. über die Karte gesetzt). Zusammen mit
+  /// `strasse`/`ort` - beide können unabhängig voneinander gepflegt werden,
+  /// üblicherweise leitet aber eins das andere ab (Adresse -> Karte per
+  /// Geocoding, Karte -> Adresse per Reverse-Geocoding).
+  breitengrad Float?
+  laengengrad Float?
+  notizen     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  /// Archivierte Bienenstände verschwinden aus den normalen Übersichten,
+  /// bleiben aber inkl. aller Völker/Stockkarten vollständig erhalten.
+  /// Endgültiges Löschen ist ein bewusst getrennter, unumkehrbarer Schritt.
+  archiviert   Boolean   @default(false)
+  archiviertAm DateTime?
+
+  /// Ein Foto des Standortes selbst (nicht einzelner Beuten) - zur Anzeige
+  /// als Hintergrund auf der Kachel der Standübersicht, analog zum
+  /// Beuten-Foto bei Volk.
+  standortFotoDateiname         String?
+  standortFotoOriginalDateiname String?
+  standortFotoMimeType          String?
+
+  /// Von Hand gewählter Bildausschnitt für Kopfbanner und Vorschaubild, siehe
+  /// Volk.beuteFotoZoom/-FokusX/-FokusY für die genaue Bedeutung.
+  standortFotoZoom   Float @default(1)
+  standortFotoFokusX Float @default(0.5)
+  standortFotoFokusY Float @default(0.5)
+
+  /// Wie die Völker-Kacheln dieses Stands angezeigt werden: chronologisch
+  /// (Reihenfolge der Anlage, Standard) oder nach von Hand festgelegter
+  /// Standposition (siehe Volk.standReihenfolge).
+  voelkerSortierung VoelkerSortierung @default(CHRONOLOGISCH)
+
+  /// Fester Stand (dort wird auch überwintert) oder Wanderstand (Völker
+  /// stehen nur vorübergehend dort, z.B. für eine Tracht oder als Ableger).
+  standtyp Standtyp @default(FEST)
+
+  voelker              Volk[]
+  /// Königinnen, die an diesem Stand standbegattet wurden.
+  begatteteKoeniginnen Koenigin[]   @relation("KoeniginBegattungsstand")
+  zuchtserienBegattung Zuchtserie[] @relation("ZuchtserieBegattungsstand")
+  dokumente            Dokument[]
+}
+
+/// Sortierung der Völker-Kacheln auf der Bienenstand-Seite.
+enum Standtyp {
+  /// Dauerhafter Stand, dort wird auch überwintert.
+  FEST
+  /// Wanderstand: Völker stehen nur vorübergehend dort (Tracht, Ableger).
+  WANDER
+}
+
+enum VoelkerSortierung {
+  /// Reihenfolge der Anlage (`Volk.createdAt`) - Volk 1, 2, 3 in der
+  /// Reihenfolge, in der sie eingerichtet wurden.
+  CHRONOLOGISCH
+  /// Von Hand festgelegte Reihenfolge, wie die Völker tatsächlich auf dem
+  /// Stand nebeneinander stehen (`Volk.standReihenfolge`).
+  STANDPOSITION
+}
+
+/// Eine vom Nutzer verwaltete Kategorie für hochgeladene Dokumente (z.B.
+/// "Gesundheitszeugnis", "Rechnung"). Ein paar Kategorien sind von Anfang an
+/// vorhanden (`vorgegeben`), weitere lassen sich beim Hochladen eines
+/// Dokuments direkt mit anlegen.
+model Dokumentkategorie {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  /// Vorgegebene Kategorien lassen sich nicht löschen, selbst angelegte schon.
+  vorgegeben  Boolean @default(false)
+  /// Reihenfolge der vorgegebenen Kategorien in der Auswahl - selbst
+  /// angelegte hängen sich chronologisch danach an.
+  reihenfolge Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  dokumente Dokument[]
+}
+
+/// Ein hochgeladenes Dokument (Bild oder PDF) mit Kategorie - wahlweise
+/// verknüpft mit einem Bienenstand, einer oder mehreren Völkern und/oder
+/// einer Königin, dann taucht es auch dort auf. Ganz ohne Verknüpfung landet
+/// es nur in der zentralen Dokumentenliste.
+model Dokument {
+  id String @id @default(cuid())
+
+  kategorieId String
+  kategorie   Dokumentkategorie @relation(fields: [kategorieId], references: [id])
+
+  /// Eigener Titel, z.B. "Rechnung Beutenkauf" - ohne Angabe zeigt die App
+  /// stattdessen die Kategorie bzw. den Originaldateinamen.
+  titel   String?
+  datum   DateTime
+  notizen String?
+
+  dateiname         String
+  originalDateiname String
+  mimeType          String
+  groesse           Int
+
+  bienenstandId String?
+  bienenstand   Bienenstand? @relation(fields: [bienenstandId], references: [id], onDelete: SetNull)
+
+  koeniginId String?
+  koenigin   Koenigin? @relation(fields: [koeniginId], references: [id], onDelete: SetNull)
+
+  voelker DokumentVolk[]
+
+  erstelltAm DateTime @default(now())
+
+  @@index([kategorieId])
+  @@index([bienenstandId])
+  @@index([koeniginId])
+}
+
+/// Verknüpfung Dokument <-> Volk (mehrere Völker je Dokument möglich, z.B.
+/// ein gemeinsamer Kaufbeleg für mehrere Beuten).
+model DokumentVolk {
+  dokumentId String
+  dokument   Dokument @relation(fields: [dokumentId], references: [id], onDelete: Cascade)
+  volkId     String
+  volk       Volk     @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  @@id([dokumentId, volkId])
+  @@index([volkId])
+}
+
+/// Status eines Bienenvolkes.
+enum VolkStatus {
+  AKTIV
+  AUFGELOEST
+  VERKAUFT
+  VERLOREN
+}
+
+/// Ein Bienenvolk mit seiner Stockkarte (Grunddaten + Verlauf).
+model Volk {
+  id            String      @id @default(cuid())
+  bienenstandId String
+  bienenstand   Bienenstand @relation(fields: [bienenstandId], references: [id], onDelete: Cascade)
+
+  name  String // z.B. "Stock 3" oder Name der Königin
+  rasse String?
+
+  /// Womit das Volk gefahren wird. Bestimmt auch, welches Beutensystem bei
+  /// den Honigräumen zuerst vorgeschlagen wird.
+  brutraumZargeId      String?
+  brutraumZarge        Zarge?  @relation("VolkBrutraum", fields: [brutraumZargeId], references: [id], onDelete: SetNull)
+  /// Betriebsweise: wie viele Zargen von brutraumZarge gestapelt sind
+  /// (1 = einräumig, 2 = zweiräumig, ...). Eine Eigenschaft des Volkes, nicht
+  /// der Zarge - dieselbe Kistengröße kann bei einem Volk einräumig, bei
+  /// einem anderen zweiräumig gefahren werden.
+  brutraumZargenAnzahl Int     @default(1)
+
+  /// Deckel des Volkes: leer = Standarddeckel (wird nirgends gezählt),
+  /// sonst der Klimadeckel aus dem Lager (Materialartikel mit
+  /// `klimadeckel = true`). Darüber errechnet die Lager-Seite "im Einsatz"
+  /// und "verfügbar" wie bei den Zargen. Wird der Lagerartikel gelöscht,
+  /// fällt das Volk auf Standarddeckel zurück.
+  klimadeckelId String?
+  klimadeckel   Materialartikel? @relation("VolkKlimadeckel", fields: [klimadeckelId], references: [id], onDelete: SetNull)
+
+  /// Die Königin, die gerade in diesem Volk sitzt. Eigener Datensatz statt
+  /// bloßer Felder am Volk: so bleiben frühere Königinnen nach einem Tausch
+  /// erhalten, lassen sich als Mutter weiterer Königinnen verknüpfen und
+  /// behalten ihren eigenen Lebenslauf. Eine Königin sitzt in höchstens einem
+  /// Volk - daher eindeutig.
+  koeniginId String?   @unique
+  koenigin   Koenigin? @relation("VolkKoenigin", fields: [koeniginId], references: [id], onDelete: SetNull)
+
+  status  VolkStatus @default(AKTIV)
+  notizen String?
+
+  /// Ein einzelnes Foto der Beute selbst (nicht des Wabenbilds - das läuft
+  /// über die Stockkarten-Einträge). Bewusst nur eins statt einer Galerie.
+  beuteFotoDateiname         String?
+  beuteFotoOriginalDateiname String?
+  beuteFotoMimeType          String?
+
+  /// Von Hand gewählter Bildausschnitt für Kopfbanner und Vorschaubild:
+  /// `beuteFotoZoom` 1 = ganz herausgezoomt (das Bild deckt den Rahmen gerade
+  /// noch randlos ab), größer = näher heran. Fokuspunkt als Bruchteil der
+  /// Bildbreite/-höhe (0-1), an dem sich der Ausschnitt orientiert - die
+  /// Mitte (0.5) ist der Ausgangspunkt, im Ausschnitt-Editor frei
+  /// verschiebbar. Wirkt in jeder Anzeigegröße gleich, weil beides als
+  /// CSS-Prozentwert (object-position/transform-origin) angewendet wird.
+  beuteFotoZoom   Float @default(1)
+  beuteFotoFokusX Float @default(0.5)
+  beuteFotoFokusY Float @default(0.5)
+
+  /// Blende (seitlicher Verlauf über dem Foto, der darüberliegenden Text
+  /// lesbar hält): `beuteFotoBlendePosition` (0-1) legt fest, ab wo (von
+  /// links, als Bruchteil der Breite) der Übergang von deckend zu
+  /// durchsichtig beginnt, `beuteFotoBlendeBreite` (0-1), wie breit dieser
+  /// Übergang ist.
+  ///
+  /// **Zurzeit nirgends in Verwendung**: seit die Volk-Seite ihr Foto als
+  /// quadratisches Vorschaubild neben dem Text zeigt, liegt kein Text mehr
+  /// über einem Foto. Die beiden Spalten bleiben trotzdem stehen - sie
+  /// wurden schon einmal gelöscht und wieder angelegt, und zwei Fließkomma-
+  /// spalten mit Vorgabewert kosten nichts. Kommt die Blende zurück, sind
+  /// die Werte noch da; soll sie endgültig weg, brauchen sie eine eigene
+  /// Migration.
+  beuteFotoBlendePosition Float @default(0.15)
+  beuteFotoBlendeBreite   Float @default(0.55)
+
+  /// Siehe Bienenstand.archiviert - gleiches Prinzip auf Volk-Ebene.
+  archiviert   Boolean   @default(false)
+  archiviertAm DateTime?
+
+  /// Inhalt des QR-Codes, der auf der Beute klebt (fertige Karte mit eigener
+  /// UUID oder ein selbst über /einstellungen/qr-codes erzeugter Code) -
+  /// einmalig in der Stockkarte angelernt, öffnet er ab dann per Scan direkt
+  /// dieses Volk. Eindeutig, damit ein Code nicht versehentlich zwei
+  /// Völkern zugeordnet ist.
+  qrCodeWert String? @unique
+
+  /// Von Hand festgelegte Position innerhalb des Stands, nur wirksam, wenn
+  /// der Bienenstand auf Bienenstand.voelkerSortierung = STANDPOSITION
+  /// steht. Ohne gesetzten Wert (neues Volk, oder diese Sortierung noch nie
+  /// benutzt) fällt die Anzeige auf die chronologische Reihenfolge zurück.
+  standReihenfolge Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  eintraege                StockkartenEintrag[]
+  behandlungen             BehandlungVolk[]
+  bioVerfahren             BioVerfahrenVolk[]
+  massnahmen               Massnahme[]
+  zuchtserienAlsZuchtvolk  Zuchtserie[]         @relation("ZuchtserieZuchtvolk")
+  zuchtserienAlsPflegevolk Zuchtserie[]         @relation("ZuchtseriePflegevolk")
+  honigraumaufsaetze       Honigraumaufsatz[]
+  koeniginEreignisse       KoeniginEreignis[]
+  begatteteKoeniginnen     Koenigin[]           @relation("KoeniginHerkunftsvolk")
+  dokumente                DokumentVolk[]
+  erzeugnisBuchungen       ErzeugnisBuchung[]
+
+  @@index([bienenstandId])
+  @@index([klimadeckelId])
+}
+
+/// Belegstelle für die Anpaarung: Stammdaten wie die Beutensysteme - einmal
+/// anlegen, danach bei jeder Königin auswählbar.
+model Belegstelle {
+  id      String  @id @default(cuid())
+  name    String
+  ort     String?
+  /// Welche Rasse dort steht. Die Drohnenvölker selbst wechseln jährlich und
+  /// stehen deshalb je Jahr in `BelegstelleJahr`.
+  rasse   String?
+  notizen String?
+
+  archiviert Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  koeniginnen Koenigin[]
+  zuchtserien Zuchtserie[]
+  jahre       BelegstelleJahr[]
+}
+
+/// Die Drohnenvölker einer Belegstelle in einem Jahr. Bleibt als Historie
+/// stehen, solange es die Belegstelle gibt: Eine Königin findet darüber ihre
+/// Vaterseite über das Jahr ihrer Begattung (siehe `belegjahr`).
+model BelegstelleJahr {
+  id            String      @id @default(cuid())
+  belegstelleId String
+  belegstelle   Belegstelle @relation(fields: [belegstelleId], references: [id], onDelete: Cascade)
+  jahr          Int
+  /// Freitext, z.B. Linie, Zuchtbuchnummer der Drohnenmutter, Anzahl Völker.
+  drohnenvoelker String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([belegstelleId, jahr])
+}
+
+/// Woher die Königin stammt. Bewusst getrennt von der Begattungsart: eine
+/// nachgeschaffene Königin kann standbegattet sein, eine zugeflogene bleibt in
+/// der Begattung unbekannt.
+enum KoeniginHerkunft {
+  EIGENE_NACHZUCHT
+  /// Das Volk hat sich selbst eine gezogen (Nachschaffung, stille Umweiselung).
+  NACHSCHAFFUNG
+  /// Mit einem Schwarm eingezogen.
+  ZUGEFLOGEN
+  ZUKAUF
+  UNBEKANNT
+}
+
+/// Wie die Königin angepaart wurde.
+enum Begattungsart {
+  BELEGSTELLE
+  STANDBEGATTUNG
+  KUENSTLICHE_BESAMUNG
+  UNBEKANNT
+}
+
+/// Wo die Königin gerade ist bzw. was aus ihr geworden ist. Ergibt sich aus
+/// dem zuletzt eingetragenen Ereignis, wird aber mitgeschrieben, damit
+/// Übersichten ohne Nachrechnen filtern können.
+enum KoeniginStatus {
+  /// Sitzt in einem Volk.
+  IM_VOLK
+  /// Lebt, sitzt aber in keinem geführten Volk (Ableger, Käfig, Reserve).
+  RESERVE
+  VERKAUFT
+  VERSTORBEN
+  /// Mit einem Schwarm abgegangen.
+  GESCHWAERMT
+}
+
+/// Eine Königin mit Abstammung, Begattung und Lebenslauf.
+model Koenigin {
+  id String @id @default(cuid())
+
+  /// Eigene Kennung, z.B. "FW 2026-14" - wird beim Anlegen vorgeschlagen.
+  kennung         String
+  /// Nummer aus einem offiziellen Zuchtbuch, falls vorhanden.
+  zuchtbuchnummer String?
+
+  rasse        String?
+  jahrgang     Int?
+  schlupfDatum DateTime?
+
+  /// Markierung: Farbe folgt üblicherweise dem Jahrgang (international
+  /// genormt), lässt sich aber frei überschreiben. Nummer = Opalithplättchen.
+  zeichenFarbe  String?
+  zeichenNummer String?
+
+  herkunft        KoeniginHerkunft @default(UNBEKANNT)
+  /// Bei Zukauf: von wem. Bei Nachschaffung/Zuflug: freie Bemerkung.
+  herkunftText    String?
+  /// Bei Nachschaffung: aus welchem Volk sie stammt.
+  herkunftsVolkId String?
+  herkunftsVolk   Volk?            @relation("KoeniginHerkunftsvolk", fields: [herkunftsVolkId], references: [id], onDelete: SetNull)
+
+  begattungsart     Begattungsart @default(UNBEKANNT)
+  /// Nur bei BELEGSTELLE gesetzt.
+  belegstelleId     String?
+  belegstelle       Belegstelle?  @relation(fields: [belegstelleId], references: [id], onDelete: SetNull)
+  /// Nur bei STANDBEGATTUNG gesetzt.
+  begattungsStandId String?
+  begattungsStand   Bienenstand?  @relation("KoeniginBegattungsstand", fields: [begattungsStandId], references: [id], onDelete: SetNull)
+  begattungVon      DateTime?
+  begattungBis      DateTime?
+  /// Drohnenvölker/Vaterlinie als Text - bei der Belegstelle steht das auf
+  /// deren Zuchtkarte, bei künstlicher Besamung weiß es der Besamer.
+  vaterlinie        String?
+
+  /// Abstammung mütterlicherseits. Zeigt auf eine andere Königin im selben
+  /// Bestand - deshalb Selbstbezug.
+  mutterKoeniginId String?
+  mutterKoenigin   Koenigin?  @relation("Abstammung", fields: [mutterKoeniginId], references: [id], onDelete: SetNull)
+  toechter         Koenigin[] @relation("Abstammung")
+
+  /// Aus welcher Zuchtserie sie stammt (nur bei eigener Nachzucht).
+  zuchtserieId         String?
+  zuchtserie           Zuchtserie?  @relation("ZuchtserieNachzucht", fields: [zuchtserieId], references: [id], onDelete: SetNull)
+  /// Serien, in denen sie Zuchtmutter war.
+  zuchtserienAlsMutter Zuchtserie[] @relation("ZuchtserieMutter")
+
+  /// Zuchtkarte einer zugekauften Königin als Foto/Scan. Bewusst in lesbarer
+  /// Auflösung gespeichert (wie die Medikamenten-Belege). Die eigene
+  /// Zuchtkarte der App ist etwas anderes: siehe `zuchtkarte`.
+  zuchtkarteFotoDateiname         String?
+  zuchtkarteFotoOriginalDateiname String?
+  zuchtkarteFotoMimeType          String?
+
+  /// Foto der Königin selbst (nicht der Beute) - steht im Kopf ihrer Seite.
+  fotoDateiname         String?
+  fotoOriginalDateiname String?
+  fotoMimeType          String?
+  /// Von Hand gewählter Bildausschnitt fürs Kopfbild, wie beim Beutenfoto:
+  /// Zoom 1 = ganz herausgezoomt, Fokuspunkt als Bruchteil (0-1). Ohne das
+  /// würde der quadratische Rahmen einfach die Mitte nehmen und schnitte die
+  /// Königin weg.
+  fotoZoom              Float   @default(1)
+  fotoFokusX            Float   @default(0.5)
+  fotoFokusY            Float   @default(0.5)
+
+  status               KoeniginStatus @default(IM_VOLK)
+  /// Interne Notizen - stehen nicht auf der Zuchtkarte.
+  notizen              String?
+  /// Früher: Text für das Feld "Bemerkungen" der Zuchtkarte. Seit die Karte
+  /// als `Zuchtkarte` gespeichert und dort von Hand bearbeitet wird, ändert
+  /// ihn niemand mehr - er dient nur noch als Vorbelegung, wenn für eine
+  /// Königin erstmals eine Karte erstellt wird.
+  zuchtkarteBemerkung  String?
+  /// Kurze Einordnung zum Honigertrag in der Bewertung (z.B. "schwaches
+  /// Trachtjahr") - der Ertrag selbst bekommt bewusst keine Schulnote, dafür
+  /// hier Platz für Kontext.
+  honigertragBemerkung String?
+  /// Gelber Stern für herausragende Königinnen - Franks eigene Markierung,
+  /// von Hand auf ihrer Seite gesetzt. Bewusst unabhängig von der Bewertung:
+  /// weder setzt eine gute Note den Stern, noch zählt er in die Note hinein.
+  stern                Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Rückrichtung zu Volk.koeniginId.
+  volk       Volk?              @relation("VolkKoenigin")
+  ereignisse KoeniginEreignis[]
+  dokumente  Dokument[]
+  /// Die erstellte eigene Zuchtkarte - leer, solange keine erstellt wurde.
+  zuchtkarte Zuchtkarte?
+
+  @@index([mutterKoeniginId])
+  @@index([zuchtserieId])
+}
+
+/// Die erstellte Zuchtkarte einer Königin: die Felder der Karte genau so, wie
+/// sie gedruckt werden. Beim Erstellen werden sie aus den Daten der Königin
+/// vorbelegt und lassen sich dann von Hand ändern - die Daten der Königin
+/// selbst bleiben davon unberührt (und umgekehrt: ändert sich dort später
+/// etwas, bleibt die Karte so, wie sie gespeichert wurde).
+model Zuchtkarte {
+  id         String   @id @default(cuid())
+  koeniginId String   @unique
+  koenigin   Koenigin @relation(fields: [koeniginId], references: [id], onDelete: Cascade)
+
+  /// Schlüssel -> Text, alles Strings. Welche Schlüssel es gibt und wie lang
+  /// sie sein dürfen, steht in web/src/lib/zuchtkarte-inhalt.ts. Als JSON,
+  /// weil sich die Felder der Karte ändern können, ohne dass jedes Mal eine
+  /// Migration nötig wäre; fehlende Schlüssel gelten als leer.
+  inhalt Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Verfahren, mit dem die umgelarvten Zellen gepflegt werden.
+enum Pflegeart {
+  UNBEKANNT
+  WEISELLOS
+  WEISELRICHTIG
+  SAMMELBRUTABLEGER
+  ANBRUETER
+  STARTER_FINISHER
+}
+
+/// Eine Zuchtserie: einmal Umlarven aus einer Zuchtmutter samt aller
+/// Arbeitsschritte davor und danach. Die Schritte selbst stehen als
+/// Maßnahmen am Zucht- bzw. Pflegevolk (Massnahme.zuchtserieId), damit sie in
+/// der Maßnahmenliste und im Kalender-Abo auftauchen. Ihre Termine ergeben
+/// sich aus dem Umlarvtermin, siehe web/src/lib/zucht.ts.
+model Zuchtserie {
+  id          String @id @default(cuid())
+  bezeichnung String
+
+  /// Das Volk, aus dem nachgezogen wird, und seine Königin als Mutter der
+  /// Nachzucht. Die Königin wird beim Anlegen festgehalten, damit die
+  /// Abstammung stimmt, auch wenn das Volk später umgeweiselt wird.
+  zuchtVolkId      String?
+  zuchtVolk        Volk?     @relation("ZuchtserieZuchtvolk", fields: [zuchtVolkId], references: [id], onDelete: SetNull)
+  mutterKoeniginId String?
+  mutterKoenigin   Koenigin? @relation("ZuchtserieMutter", fields: [mutterKoeniginId], references: [id], onDelete: SetNull)
+  /// Volk, das die Zellen pflegt (Pflegevolk/Sammelbrutableger). Leer heißt:
+  /// die Schritte am Pflegevolk landen beim Zuchtvolk.
+  pflegeVolkId     String?
+  pflegeVolk       Volk?     @relation("ZuchtseriePflegevolk", fields: [pflegeVolkId], references: [id], onDelete: SetNull)
+  /// Wie die Zellen angepflegt und fertig gepflegt werden (weisellos,
+  /// Sammelbrutableger, Anbrüter ...). Bestimmt Zeitpunkt und Text einzelner
+  /// Schritte, siehe web/src/lib/zucht.ts.
+  pflegeart        Pflegeart @default(UNBEKANNT)
+  /// Reife Zellen schlüpfen im Brutschrank statt im Pflegevolk - lässt sich
+  /// mit jeder Pflegeart kombinieren.
+  brutschrank      Boolean   @default(false)
+
+  /// Leer, solange der Termin noch nicht feststeht - dann gibt es auch noch
+  /// keine Maßnahmen.
+  umlarvDatum DateTime?
+
+  anzahlUmgelarvt   Int?
+  anzahlAngenommen  Int?
+  anzahlVerdeckelt  Int?
+  anzahlGeschluepft Int?
+
+  /// Geplante Begattung - wird für die nachgezogenen Königinnen übernommen.
+  begattungsart     Begattungsart @default(UNBEKANNT)
+  belegstelleId     String?
+  belegstelle       Belegstelle?  @relation(fields: [belegstelleId], references: [id], onDelete: SetNull)
+  begattungsStandId String?
+  begattungsStand   Bienenstand?  @relation("ZuchtserieBegattungsstand", fields: [begattungsStandId], references: [id], onDelete: SetNull)
+
+  notizen       String?
+  abgeschlossen Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  koeniginnen Koenigin[]  @relation("ZuchtserieNachzucht")
+  massnahmen  Massnahme[]
+}
+
+/// Was mit einer Königin passiert ist - eine Zeile je Station.
+enum KoeniginEreignisArt {
+  GESCHLUEPFT
+  ZUR_BELEGSTELLE
+  VON_BELEGSTELLE
+  /// In ein Volk zugesetzt.
+  ZUGESETZT
+  /// In einen Ableger/Königinnenableger gesetzt.
+  IN_ABLEGER
+  /// Aus dem Volk genommen (ersetzt/umgeweiselt), ohne dass sie eingeht.
+  ENTNOMMEN
+  VERKAUFT
+  VERSTORBEN
+  /// Mit einem Schwarm abgegangen.
+  GESCHWAERMT
+  /// Beurteilung aus einer Durchsicht, auf Nachfrage beim Speichern der
+  /// Stockkarte übernommen.
+  BEWERTUNG
+  SONSTIGES
+}
+
+/// Lebenslauf-Eintrag einer Königin.
+model KoeniginEreignis {
+  id         String   @id @default(cuid())
+  koeniginId String
+  koenigin   Koenigin @relation(fields: [koeniginId], references: [id], onDelete: Cascade)
+
+  datum  DateTime
+  art    KoeniginEreignisArt
+  /// Betroffenes Volk, soweit eins beteiligt ist (zugesetzt, entnommen, ...).
+  volkId String?
+  volk   Volk?               @relation(fields: [volkId], references: [id], onDelete: SetNull)
+  notiz  String?
+
+  /// Bei übernommenen Beurteilungen: aus welcher Durchsicht sie stammen. Die
+  /// Zahlen bleiben damit an einer Stelle - für den späteren Vergleich der
+  /// Königinnen lassen sie sich von dort holen, statt sie zu verdoppeln.
+  stockkartenEintragId String?
+  stockkartenEintrag   StockkartenEintrag? @relation(fields: [stockkartenEintragId], references: [id], onDelete: SetNull)
+
+  /// Foto zum Ereignis - etwa vom Brutbild beim Zusetzen oder von der
+  /// gezeichneten Königin.
+  fotoDateiname         String?
+  fotoOriginalDateiname String?
+  fotoMimeType          String?
+
+  /// Vom Käfigen oder Bannwabenverfahren angelegt - geht mit dem Verfahren.
+  bioVerfahrenId String?
+  bioVerfahren   BioVerfahren? @relation(fields: [bioVerfahrenId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([koeniginId, datum])
+}
+
+/// Zählweise beim Feststellen des Varroa-Befalls.
+/// PUDERZUCKER und AUSWASCHUNG arbeiten beide mit einer Bienenprobe und
+/// werden gleich ausgewertet (Milben je 100 Bienen), GEMUELLDIAGNOSE über den
+/// natürlichen Milbenfall pro Tag - siehe web/src/lib/varroa.ts.
+enum VarroaZaehlweise {
+  PUDERZUCKER
+  AUSWASCHUNG
+  GEMUELLDIAGNOSE
+  SONSTIGE
+}
+
+/// Übliche Futterarten bei der Fütterung eines Volkes.
+enum FuetterungsArt {
+  INVERTZUCKERSIRUP
+  WEIZENSIRUP
+  ZUCKERWASSER_1_1
+  ZUCKERWASSER_3_2
+  FUTTERTEIG
+  EIWEISSFUTTERTEIG
+  SONSTIGE
+}
+
+/// Wie das Gewicht ermittelt wurde: nur eine Seite angehoben (Schätzung)
+/// oder der ganze Stock vollständig gewogen.
+enum Wiegemethode {
+  EINSEITIG
+  VOLLSTAENDIG
+}
+
+/// Ein Verlaufseintrag der Stockkarte: eine Beobachtung/ein Durchsehen zu einem Datum.
+/// Feldauswahl und Reihenfolge orientieren sich an einer verbreiteten
+/// Imker-App (Imkado), an den üblichen Abschnitten einer Bienenkontrolle:
+/// Brutraum -> Varroa -> Gesamtbeurteilung -> Ernte/Fütterung/Gewicht.
+model StockkartenEintrag {
+  id     String @id @default(cuid())
+  volkId String
+  volk   Volk   @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  datum DateTime
+
+  // --- Brutraum: Sichtung ---------------------------------------------
+  koeniginGesehen        Boolean?
+  stifteGesehen          Boolean?
+  larvenGesehen          Boolean?
+  verdeckelteBrutGesehen Boolean?
+  weiselzellenGesehen    Boolean?
+  /// Volk ist drohnenbrütig (nur ja/leer, löst beim Speichern die Frage
+  /// nach einer Maßnahme aus).
+  drohnenbruetig         Boolean?
+  /// Drohnenbrut ausgeschnitten (biotechnische Varroa-Bekämpfung, nur ja/leer).
+  drohnenbrutGeschnitten Boolean?
+  volksstaerke           Int? // Besetzte Waben
+  bebrueteteWaben        Int?
+
+  // --- Brutraum: Waben genommen/gegeben ---------------------------------
+  leerwaben              Int?
+  mittelwaende           Int?
+  brutwaben              Int?
+  futterwaben            Int?
+  baurahmenDrohnenrahmen Int?
+
+  // --- Varroa-Management -------------------------------------------------
+  varroaZaehlweise        VarroaZaehlweise?
+  varroaAnzahl            Int? // gezählte/gefallene Milben, je nach Zählweise
+  varroaGemuellTage       Int? // Gemülldiagnose: Tage, die die Bodeneinlage drin lag
+  varroaBienenprobeGramm  Int? // Puderzucker/Auswaschung: Gewicht der Bienenprobe (50 g = ca. 500 Bienen)
+  biotechnischeMassnahmen String?
+
+  // --- Beurteilung des Volkes ---------------------------------------------
+  /// Alle Beurteilungen als Note von 1,0 (beste Stufe) bis 6,0
+  /// (schlechteste) in halben Schritten; die Namen der Stufen stehen in
+  /// web/src/components/stockkarten-eintrag-felder.tsx.
+  volksstaerkeEinschaetzung Float?
+  futtermengeEinschaetzung  Float?
+  sanftmut                  Float?
+  schwarmtrieb              Float?
+  wabensitz                 Float?
+  gesamteindruck            Float?
+  /// Größe der Brutflächen - Anhaltspunkt für die Legeleistung der Königin.
+  legeleistung              Float?
+  /// Bienen haben den Imker bei der Durchsicht angeflogen. Nur "ja" oder
+  /// leer (nicht angehakt = keine Angabe), wie die Sichtungs-Haken.
+  bienenAngeflogen          Boolean?
+  /// Volk ist abgeschwärmt (nur ja/leer, löst beim Speichern die Frage
+  /// nach einer Maßnahme aus).
+  abgeschwaermt             Boolean?
+
+  // --- Fütterer -------------------------------------------------------
+  /// "AUFGESETZT" oder "ABGENOMMEN", nur wenn sich mit diesem Eintrag etwas
+  /// geändert hat (siehe web/src/lib/fuetterer.ts). Ob gerade ein Fütterer
+  /// drauf liegt, ergibt sich aus der letzten Aktion.
+  fuettererAktion String?
+
+  // --- Honigernte -----------------------------------------------------
+  honigGeerntet        Boolean?
+  /// Nur noch für Altdaten: die Zahl der Waben steckt jetzt in
+  /// `honigernteAnteile`, aufgeschlüsselt nach Wabenmaß.
+  honigRaehmchenAnzahl Int?
+  /// Was die Durchschnittswerte aus den Einstellungen für die erfassten
+  /// Zargen und Waben ergeben hätten - zum Vergleich mit dem, was Frank
+  /// tatsächlich angesetzt hat. Über die Zeit zeigt das, ob die
+  /// Durchschnittswerte stimmen.
+  honigSchaetzungKg    Float?
+  /// Die Menge, die zählt: Schätzung, gegebenenfalls per Schieberegler
+  /// nach oben oder unten korrigiert.
+  honigertragKg        Float?
+  honigart             String?
+
+  // --- Fütterung / Gewicht -------------------------------------------------
+  fuetterungArt     FuetterungsArt?
+  fuetterungMengeKg Float?
+  gewichtKg         Float? // manuell erfasstes Gewicht (unabhängig von einer Stockwaage)
+  wiegemethode      Wiegemethode?
+
+  // --- Frei -----------------------------------------------------------
+  notizen String? // freie Notizen
+
+  /// Gesetzt, wenn dieser Eintrag durch einen Stand-Umzug entstanden ist:
+  /// Klartext-Kopie des Namens des Bienenstands, von dem das Volk zu diesem
+  /// Zeitpunkt (`datum`) umgezogen ist. Bleibt bestehen, auch wenn der alte
+  /// Stand später umbenannt oder gelöscht wird - wie `standNameDamals` bei
+  /// BehandlungVolk. Ohne Wert ist es ein normaler Durchsicht-Eintrag.
+  umzugVonStandName String?
+
+  /// Feldnamen aus BEURTEILUNGS_KRITERIEN, die bei dieser Durchsicht zwar
+  /// erfasst, aber bewusst aus der Bewertung der Königin herausgenommen
+  /// wurden (z.B. weil ein unvorhergesehenes Ereignis das Ergebnis verfälscht
+  /// hat). Die Stockkarte selbst zeigt die Werte weiterhin vollständig - nur
+  /// der Schnitt bei der Königin lässt sie außen vor.
+  ausschlussKriterien String[] @default([])
+
+  createdAt DateTime @default(now())
+
+  /// Kennung, die das Handy beim Absenden vergibt (lib/warteschlange.ts).
+  /// Kommt derselbe Eintrag zweimal an - etwa weil im Funkloch die Antwort
+  /// verloren ging und die Warteschlange ihn nachsendet -, wird er nur
+  /// einmal gespeichert. Leer bei Einträgen ohne Warteschlange.
+  sendungId String?
+
+  bilder                 Bild[]
+  massnahmen             Massnahme[]
+  honigernteAnteile      HonigernteAnteil[]
+  /// Honigräume, die bei dieser Durchsicht aufgesetzt bzw. abgenommen wurden.
+  aufgesetzteHonigraeume Honigraumaufsatz[] @relation("AufsatzAufgesetzt")
+  geernteteHonigraeume   Honigraumaufsatz[] @relation("AufsatzGeerntet")
+  /// Erzeugnis-Lagerbuchungen, die auf Nachfrage aus der Honigernte dieses
+  /// Eintrags entstanden sind.
+  erzeugnisBuchungen     ErzeugnisBuchung[]
+
+  /// Beurteilungen, die aus diesem Eintrag zur Königin übernommen wurden.
+  koeniginEreignisse KoeniginEreignis[]
+
+  @@index([volkId])
+  @@unique([volkId, sendungId])
+}
+
+/// Woraus sich eine Ernte zusammensetzt: so viele Zargen einer Honigraumgröße
+/// bzw. so viele einzelne Waben eines Wabenmaßes.
+///
+/// Bezeichnung und Gewicht je Einheit stehen als Kopie mit drin. Ändert man
+/// später die Durchschnittswerte in den Einstellungen oder löscht eine
+/// Wabengröße, bleibt ein alter Eintrag dadurch so, wie er erfasst wurde -
+/// sonst würden sich rückwirkend Erntemengen verschieben.
+model HonigernteAnteil {
+  id                   String             @id @default(cuid())
+  stockkartenEintragId String
+  stockkartenEintrag   StockkartenEintrag @relation(fields: [stockkartenEintragId], references: [id], onDelete: Cascade)
+
+  /// true = ganze Zarge, false = einzelne Waben.
+  istZarge Boolean
+
+  zargeId     String?
+  zarge       Zarge?     @relation(fields: [zargeId], references: [id], onDelete: SetNull)
+  wabenmassId String?
+  wabenmass   Wabenmass? @relation(fields: [wabenmassId], references: [id], onDelete: SetNull)
+
+  /// Klartext, z.B. "Zander Honigraum (10 Waben)" - bleibt lesbar, auch wenn
+  /// die Größe später in den Einstellungen verschwindet.
+  bezeichnung         String
+  anzahl              Int
+  gewichtProEinheitKg Float
+
+  @@index([stockkartenEintragId])
+}
+
+/// Eine einzelne Maßnahme/ein ToDo zu einem Volk: terminierbar
+/// (Fälligkeitsdatum) und einzeln abhakbar, damit offene Punkte je Volk im
+/// Blick bleiben (z.B. in der Volk-Vorschau auf der Bienenstand-Seite).
+/// Hängt immer direkt am Volk, damit sich Maßnahmen auch vorausplanen lassen,
+/// bevor überhaupt ein Stockkarten-Eintrag existiert (z.B. von der
+/// Maßnahmen-Übersicht aus). `stockkartenEintrag` ist zusätzlich gesetzt,
+/// wenn die Maßnahme im Zuge eines konkreten Eintrags angelegt wurde (freies
+/// Textfeld beim Anlegen, Speichern-Hinweis-Popup) - dann taucht sie auch
+/// dort im Verlauf auf.
+model Massnahme {
+  id     String @id @default(cuid())
+  volkId String
+  volk   Volk   @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  stockkartenEintragId String?
+  stockkartenEintrag   StockkartenEintrag? @relation(fields: [stockkartenEintragId], references: [id], onDelete: Cascade)
+
+  text       String
+  faelligAm  DateTime?
+  erledigt   Boolean   @default(false)
+  erledigtAm DateTime?
+
+  /// Arbeitsschritt einer Zuchtserie (Schlüssel aus web/src/lib/zucht.ts) -
+  /// der Termin wird mitverschoben, wenn sich der Umlarvtermin ändert.
+  zuchtserieId String?
+  zuchtserie   Zuchtserie? @relation(fields: [zuchtserieId], references: [id], onDelete: Cascade)
+  zuchtSchritt String?
+
+  /// Erscheint im Kalender-Abo. Eigene Maßnahmen immer; bei den vielen
+  /// Zuchtschritten wählt der Imker, welche er im Kalender haben will.
+  imKalender Boolean @default(true)
+
+  /// Folgeschritt eines biotechnischen Verfahrens (Schlüssel aus
+  /// web/src/lib/bio-verfahren.ts) - der Termin wird mitverschoben, wenn
+  /// sich der Beginn des Verfahrens ändert.
+  bioVerfahrenId String?
+  bioVerfahren   BioVerfahren? @relation(fields: [bioVerfahrenId], references: [id], onDelete: Cascade)
+  bioSchritt     String?
+
+  createdAt DateTime @default(now())
+
+  /// Kennung aus der Warteschlange auf dem Handy (lib/warteschlange.ts) wie
+  /// bei StockkartenEintrag: eine nachgesendete Maßnahme kommt nur einmal an.
+  sendungId String?
+
+  @@index([volkId])
+  @@unique([volkId, sendungId])
+  @@index([zuchtserieId])
+  @@index([bioVerfahrenId])
+  @@index([stockkartenEintragId])
+}
+
+/// Ein Foto, das im Verlauf eines Stockkarten-Eintrags dokumentiert ist.
+model Bild {
+  id                   String             @id @default(cuid())
+  stockkartenEintragId String
+  stockkartenEintrag   StockkartenEintrag @relation(fields: [stockkartenEintragId], references: [id], onDelete: Cascade)
+
+  dateiname         String // Name, unter dem die Datei im Upload-Verzeichnis liegt
+  originalDateiname String
+  mimeType          String
+  groesse           Int // Dateigröße in Byte
+  beschreibung      String?
+
+  erstelltAm DateTime @default(now())
+
+  @@index([stockkartenEintragId])
+}
+
+/// Stammdaten des Imkereibetriebs. Genau ein Datensatz (feste id "standard") -
+/// die Halteranschrift muss nach § 2 THAMNV im Kopf jedes Behandlungsnachweises
+/// stehen, gehört aber nicht in den Quelltext.
+model Betrieb {
+  id String @id @default("standard")
+
+  halterName       String
+  strasse          String?
+  plzOrt           String?
+  telefon          String?
+  email            String?
+  /// Registriernummer nach Viehverkehrsverordnung / Veterinäramt, falls vorhanden.
+  registriernummer String?
+  /// Bundesland als Kürzel (BW, BY, ...; siehe web/src/lib/bundeslaender.ts).
+  /// Leer = nicht angegeben. Die Velutina-Meldungen der LUBW gibt es nur für
+  /// Baden-Württemberg - außerhalb davon blendet die App Karte und Warnungen aus.
+  bundesland       String?
+  /// Name neben dem Logo im Menü. Leer = "Imkereiverwaltung".
+  menueName        String?
+
+  /// Geheime Kennung in der Adresse des Kalender-Feeds. Wird beim ersten
+  /// Speichern erzeugt und lässt sich neu würfeln, falls die Adresse einmal
+  /// in falsche Hände gerät - dann verlieren alte Abos den Zugriff.
+  kalenderToken String? @unique
+
+  /// Wann die Erinnerung zum Termin kommen soll (Schlüssel, siehe
+  /// web/src/lib/kalender.ts). Leer = Standard (Vortag 10 Uhr).
+  kalenderErinnerung String?
+  /// Farbe der Termine im Kalender (Schlüssel, siehe web/src/lib/kalender.ts).
+  /// Leer = keine Vorgabe, dann bestimmt die Kalender-App die Farbe.
+  kalenderFarbe      String?
+  /// Muster für den Titel eines Termins, z.B. "{massnahme} – {volk}".
+  /// Leer = Standardmuster.
+  kalenderTitel      String?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Ein konkret gekauftes Tierarzneimittel (eine Packung/ein Gebinde). Trägt den
+/// Erwerbsnachweis nach § 1 Abs. 2 THAMNV: Lieferant, Art und Menge sowie den
+/// Beleg selbst. Wird bei einer Behandlung nur noch ausgewählt, damit der
+/// Nachweis genau einmal erfasst werden muss.
+model Medikament {
+  id String @id @default(cuid())
+
+  /// Handelsname, exakt wie auf der Packung (§ 2 Nr. 2 THAMNV).
+  name             String
+  wirkstoff        String?
+  /// Zulassungsnummer - nur zugelassene Mittel dürfen angewendet werden.
+  zulassungsnummer String?
+  /// Einheit der Dosierung: ml, g, Streifen, ...
+  einheit          String  @default("ml")
+  /// Standard-Wartezeit in Tagen, wird bei der Behandlung vorgeschlagen.
+  wartezeitTage    Int     @default(0)
+
+  /// Erwerbsnachweis: Lieferant mit Anschrift (Apotheke, Fachhandel, Tierarzt).
+  lieferant     String?
+  kaufdatum     DateTime?
+  /// Rechnungs-/Lieferschein-/Verschreibungsnummer.
+  belegnummer   String?
+  chargennummer String?
+  verfallsdatum DateTime?
+
+  notizen String?
+
+  /// Aufgebraucht/abgelaufen: taucht bei neuen Behandlungen nicht mehr auf,
+  /// bleibt aber für bestehende Nachweise erhalten (5 Jahre Aufbewahrung).
+  archiviert   Boolean   @default(false)
+  archiviertAm DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  belege       MedikamentBeleg[]
+  behandlungen Behandlung[]
+}
+
+/// Beleg-Datei zu einem Medikament (Rechnung, Lieferschein, tierärztliche
+/// Verschreibung) - als Foto oder PDF. Nach § 1 Abs. 2 THAMNV 5 Jahre
+/// aufzubewahren und der Behörde auf Verlangen vorzulegen.
+model MedikamentBeleg {
+  id           String     @id @default(cuid())
+  medikamentId String
+  medikament   Medikament @relation(fields: [medikamentId], references: [id], onDelete: Cascade)
+
+  dateiname         String
+  originalDateiname String
+  mimeType          String
+  groesse           Int
+
+  erstelltAm DateTime @default(now())
+
+  @@index([medikamentId])
+}
+
+/// Eine durchgeführte Behandlung - ein Vorgang, der mehrere Völker auf einmal
+/// abdeckt (so wie am Bienenstand tatsächlich gearbeitet wird und wie der
+/// amtliche Bestandsbuch-Vordruck aufgebaut ist).
+///
+/// Wird nach dem Speichern nicht mehr bearbeitet: § 1 Abs. 1 THAMNV verlangt
+/// unveränderliche Aufzeichnungen. Eine falsche Angabe wird storniert (mit
+/// Grund, bleibt sichtbar) und neu erfasst.
+model Behandlung {
+  id           String     @id @default(cuid())
+  medikamentId String
+  medikament   Medikament @relation(fields: [medikamentId], references: [id])
+
+  /// Wogegen behandelt wurde: Varroose, Nosemose, Kalkbrut, Faulbrut, ...
+  /// Freitext mit Vorschlägen, damit auch seltene Indikationen passen.
+  indikation String
+
+  /// Datum der Anwendung (§ 2 Nr. 5 THAMNV).
+  datum     DateTime
+  /// Ende bei Langzeitbehandlungen (Thymovar, Ameisensäure-Langzeitverdunster).
+  endeDatum DateTime?
+
+  /// Verabreichte Menge je Volk (§ 2 Nr. 4), Einheit kommt vom Medikament.
+  mengeJeVolk   Float
+  /// Wartezeit in Tagen (§ 2 Nr. 6) - auch 0 ist eine Angabe.
+  wartezeitTage Int
+  /// Name der anwendenden Person (§ 2 Nr. 7).
+  anwender      String
+
+  bemerkung String?
+
+  /// Storniert statt gelöscht - die Zeile bleibt im Nachweis stehen.
+  storniertAm    DateTime?
+  storniertGrund String?
+
+  /// Gehört zu einem biotechnischen Verfahren (z.B. Oxalsäure nach dem
+  /// Käfigen). Wird das Verfahren gelöscht, bleibt die Behandlung stehen.
+  bioVerfahrenId String?
+  bioVerfahren   BioVerfahren? @relation(fields: [bioVerfahrenId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  voelker BehandlungVolk[]
+
+  @@index([datum])
+}
+
+/// Verknüpfung Behandlung <-> Volk. Hält den Volksnamen und den Standort zum
+/// Zeitpunkt der Behandlung als Text fest: nach § 2 Nr. 1 THAMNV muss der
+/// Nachweis zeigen, wo das Volk damals stand - wird es später umgesetzt oder
+/// umbenannt, darf der alte Nachweis sich nicht mitverändern.
+model BehandlungVolk {
+  behandlungId String
+  behandlung   Behandlung @relation(fields: [behandlungId], references: [id], onDelete: Cascade)
+  volkId       String
+  volk         Volk       @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  volkNameDamals  String
+  standNameDamals String
+
+  @@id([behandlungId, volkId])
+  @@index([volkId])
+}
+
+/// Biotechnisches Verfahren gegen die Varroa, ohne Tierarzneimittel.
+enum BioVerfahrenArt {
+  /// Totale Brutentnahme.
+  TBE
+  TEIL_BRUTENTNAHME
+  BANNWABE
+  KOENIGIN_KAEFIGEN
+  SONSTIGES
+}
+
+/// Biotechnische Behandlung (TBE, Bannwabe, Königin käfigen, ...). Kein
+/// Tierarzneimittel, deshalb nicht im Bestandsbuch und änderbar. Die festen
+/// Folgeschritte stehen als Maßnahmen je Volk; ein Medikament, das dazu
+/// kommt (Oxalsäure im brutfreien Volk), ist eine eigene Behandlung mit
+/// Verweis hierher.
+model BioVerfahren {
+  id   String          @id @default(cuid())
+  art  BioVerfahrenArt
+  /// Nur bei SONSTIGES: was gemacht wurde.
+  bezeichnung String?
+
+  /// Tag 0 des Fahrplans.
+  beginn    DateTime
+  anwender  String
+  bemerkung String?
+
+  /// TBE/Teil-Brutentnahme: entnommene Brutwaben je Volk.
+  brutwaben Int?
+  /// TBE/Teil-Brutentnahme: wohin die Brutwaben gingen (BRUTSAMMLER,
+  /// ABLEGER, EINGESCHMOLZEN).
+  verbleib  String?
+  /// TBE: offene Brutwabe als Fangwabe im Volk gelassen.
+  fangwabe  Boolean @default(false)
+  /// Käfigen/Bannwabe: verwendeter Käfig bzw. Wabentasche.
+  kaefig    String?
+  /// Bannwabe: Rhythmus ("3x9", "3x7", "4x7", "2x12"), leer = 3x9.
+  bannwabeVariante String?
+  /// Schritte auch unter Maßnahmen, im Kalender und in den Hinweisen zeigen.
+  /// Aus: der Fahrplan steht nur beim Verfahren (die Maßnahmen gibt es
+  /// trotzdem, sie tragen den Fortschritt).
+  inMassnahmen     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  voelker            BioVerfahrenVolk[]
+  massnahmen         Massnahme[]
+  behandlungen       Behandlung[]
+  koeniginEreignisse KoeniginEreignis[]
+
+  @@index([beginn])
+}
+
+/// Verknüpfung Verfahren <-> Volk, mit Volks- und Standname von damals wie
+/// bei BehandlungVolk.
+model BioVerfahrenVolk {
+  verfahrenId String
+  verfahren   BioVerfahren @relation(fields: [verfahrenId], references: [id], onDelete: Cascade)
+  volkId      String
+  volk        Volk         @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  volkNameDamals  String
+  standNameDamals String
+
+  @@id([verfahrenId, volkId])
+  @@index([volkId])
+}
+
+/// Umfang eines erzeugten Behandlungsnachweises.
+enum NachweisUmfang {
+  ALLE
+  STAND
+  VOLK
+}
+
+/// Ein erzeugter Behandlungsnachweis als PDF-Datei. Bleibt nach dem Erstellen
+/// auf dem Server liegen, bis er ausdrücklich gelöscht wird - so hat Frank die
+/// Nachweise auch dann noch, wenn sich die Datenlage später ändert, und kann
+/// sie jederzeit erneut herunterladen oder verschicken.
+model NachweisDatei {
+  id String @id @default(cuid())
+
+  jahr        Int
+  umfang      NachweisUmfang
+  /// Klartext des Umfangs, z.B. "Bienenstand Waldrand" - bleibt lesbar, auch
+  /// wenn der Stand später umbenannt oder gelöscht wird.
+  bezeichnung String
+
+  dateiname          String
+  originalDateiname  String
+  groesse            Int
+  /// Wie viele Behandlungen im Nachweis stehen (für die Übersicht).
+  anzahlBehandlungen Int    @default(0)
+
+  erstelltAm DateTime @default(now())
+
+  @@index([jahr])
+}
+
+/// Welcher Teil des Lagers in einer Lagerliste steht.
+enum LagerlisteArt {
+  MATERIAL
+  ERZEUGNISSE
+  /// Buchungen (Zu- und Abgänge) der Erzeugnisse in einem Zeitraum.
+  BUCHUNGEN
+}
+
+/// Eine aus der Lagerverwaltung erzeugte Bestandsliste als PDF-Datei
+/// (Gesamtbestand, Lagerorte, im Einsatz). Wie der Behandlungsnachweis ein
+/// fester Stand zum Zeitpunkt des Erstellens - bleibt, bis sie gelöscht wird,
+/// und erscheint unter Dokumente und unten auf der Lager-Seite.
+model LagerlisteDatei {
+  id  String        @id @default(cuid())
+  art LagerlisteArt
+
+  dateiname         String
+  originalDateiname String
+  groesse           Int
+  /// Wie viele Positionen in der Liste stehen (für die Übersicht).
+  anzahlPositionen  Int    @default(0)
+  /// Nur bei BUCHUNGEN: abgedeckter Zeitraum und Erzeugnis als Klartext,
+  /// z.B. "01.01.2026 bis 24.10.2026 · Honig".
+  zeitraum          String?
+
+  erstelltAm DateTime @default(now())
+
+  @@index([erstelltAm])
+}
+
+/// Ein Beutensystem, z.B. Zander oder Deutsch Normalmaß. Klammer um die
+/// Wabenmaße und Honigraumgrößen, die dazu gehören.
+model Beutensystem {
+  id      String  @id @default(cuid())
+  name    String
+  notizen String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wabenmasse Wabenmass[]
+}
+
+/// Eine Wabengröße innerhalb eines Beutensystems, z.B. "Zander ganz" oder
+/// "Zander Halbrahmen". Trägt den Durchschnittsertrag einer vollen Honigwabe
+/// dieses Maßes - Grundlage der Ertragsschätzung bei der Ernte.
+model Wabenmass {
+  id             String       @id @default(cuid())
+  beutensystemId String
+  beutensystem   Beutensystem @relation(fields: [beutensystemId], references: [id], onDelete: Cascade)
+
+  name           String
+  /// Rähmchenmaß in Millimetern (Breite x Höhe, Außenmaß der Oberleiste).
+  /// Nur zur Information - die App rechnet damit nicht.
+  breiteMm       Int?
+  hoeheMm        Int?
+  /// Wofür das Maß taugt: BRUTRAUM, HONIGRAUM oder BEIDES. Kürzt die
+  /// Auswahllisten - ein Halbrahmen wird nicht als Brutraum vorgeschlagen.
+  eignung        String @default("BEIDES")
+  /// Durchschnittlicher Honigertrag einer vollen Wabe in kg. Ein Erfahrungs-
+  /// wert, den jeder für seine Betriebsweise anpassen soll.
+  honigProWabeKg Float  @default(2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zargen            Zarge[]
+  honigernteAnteile HonigernteAnteil[]
+
+  @@index([beutensystemId])
+}
+
+/// Eine Zarge: eine bestimmte Zahl Waben eines Maßes, entweder als Brutraum
+/// oder als Honigraum genutzt.
+///
+/// Der Durchschnittsertrag steht extra und nicht als Wabenzahl x Wabengewicht,
+/// weil eine volle Zarge selten genau das bringt (Randwaben, Baurahmen,
+/// Bienenbrot). Beim Brutraum spielt er keine Rolle.
+/// Eine Zarge ist einfach eine Kiste einer bestimmten Größe - ob sie gerade
+/// als Brutraum oder als Honigraum dient, ist keine Eigenschaft der Kiste,
+/// sondern eine Entscheidung am Volk (Volk.brutraumZargeId) bzw. beim
+/// Aufsetzen in der Stockkarte (Honigraumaufsatz). Früher trug die Zarge
+/// selbst eine feste "verwendung" (BRUTRAUM/HONIGRAUM) und beim Brutraum
+/// zusätzlich die gestapelte Anzahl - beides zusammengeführt, weil dieselbe
+/// Kiste in der Praxis für beides herhält und die Stapelzahl ohnehin je Volk
+/// unterschiedlich sein kann (siehe Volk.brutraumZargenAnzahl). Welche
+/// Rähmchenmaße überhaupt für welche Rolle taugen, steht weiterhin an
+/// Wabenmass.eignung - das ist eine physische Tatsache, keine Verwaltungs-
+/// entscheidung, und bleibt darum bestehen.
+model Zarge {
+  id          String    @id @default(cuid())
+  wabenmassId String
+  wabenmass   Wabenmass @relation(fields: [wabenmassId], references: [id], onDelete: Cascade)
+
+  name            String
+  wabenAnzahl     Int    @default(10)
+  /// Durchschnittlicher Honigertrag einer vollen Zarge in kg.
+  honigProZargeKg Float
+
+  /// Physisch vorhandene Zargen dieses Typs (Lagerverwaltung) - ohne Angabe
+  /// (null) ist der Bestand schlicht noch nicht erfasst, zählt aber nicht als
+  /// 0. "Im Einsatz" wird nicht separat gepflegt, sondern aus aktiven
+  /// Honigraumaufsätzen bzw. Völkern mit diesem Brutraum errechnet - siehe
+  /// `zargenBestandsuebersicht()` in `web/src/lib/lager.ts`.
+  gesamtbestand Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  honigernteAnteile  HonigernteAnteil[]
+  honigraumaufsaetze Honigraumaufsatz[]
+  brutraumVoelker    Volk[]             @relation("VolkBrutraum")
+
+  @@index([wabenmassId])
+}
+
+/// Wo etwas lagert (z.B. "Lager 1", "Kühlraum", "Dachboden Elternhaus") -
+/// komplett optional: Frank muss keine Orte anlegen, kann es aber, sobald er
+/// an mehreren Stellen lagert. Steht Material wie Erzeugnissen offen.
+model Lagerort {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  notizen String?
+
+  createdAt DateTime @default(now())
+
+  materialartikel    Materialartikel[]
+  erzeugnisBuchungen ErzeugnisBuchung[]
+}
+
+/// Frei benanntes Material, das sich keiner Zarge zuordnen lässt (Böden,
+/// Deckel, Absperrgitter, Werkzeug, Schutzausrüstung, ...). Anders als bei
+/// Zargen gibt es hier keine automatische "im Einsatz"-Berechnung - nichts
+/// sonst in der App verfolgt, wo dieses Material gerade steckt.
+///
+/// Ausnahme Klimadeckel (`klimadeckel = true`): die lassen sich einem Volk
+/// zuordnen (Volk.klimadeckelId), `bestand` ist dann der Gesamtbestand und
+/// "im Einsatz" zählt die aktiven Völker mit diesem Deckel.
+model Materialartikel {
+  id          String  @id @default(cuid())
+  name        String
+  klimadeckel Boolean @default(false)
+  /// z.B. "Stück", "kg", "Rolle", "Paar".
+  einheit     String  @default("Stück")
+  bestand     Float   @default(0)
+  notizen     String?
+
+  /// Optional: wo das Material lagert. Braucht mehr als einen Lagerort für
+  /// denselben Artikel, legt man ihn einfach je Ort als eigene Zeile an.
+  lagerortId String?
+  lagerort   Lagerort? @relation(fields: [lagerortId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  voelker Volk[] @relation("VolkKlimadeckel")
+
+  @@index([lagerortId])
+}
+
+/// Eine Art von Erzeugnis aus der Imkerei (Honig, Wachs, Propolis, ...).
+/// Ein paar Kategorien sind von Anfang an vorhanden (`vorgegeben`), weitere
+/// lassen sich beim Erfassen einer Buchung direkt mit anlegen - analog zu
+/// Dokumentkategorie.
+model Erzeugnistyp {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  /// z.B. "kg", "Gläser", "Stück", "Liter".
+  einheit     String  @default("kg")
+  vorgegeben  Boolean @default(false)
+  reihenfolge Int     @default(0)
+  /// Freiwillig: Eimer und Hobbocks einzeln mit echtem Gewicht führen (z.B.
+  /// für die Bio-Kontrolle). Aus = wie bisher, gezählt wird nach Gebindeanzahl
+  /// und Nennwert. Gläser zählen immer nach Nennwert.
+  eimerEinzeln Boolean @default(false)
+  /// Freiwillig, nur mit eingeschaltetem Warenwert (Lagereinstellung): Wert
+  /// in Euro je Einheit (je kg, je Stück, je Liter ...). Leer = kein Preis.
+  preis        Float?
+
+  createdAt DateTime @default(now())
+
+  buchungen ErzeugnisBuchung[]
+  gebinde   Gebinde[]
+  sorten    Sorte[]
+  eimer     Eimer[]
+}
+
+/// Ein einzelner Eimer (oder Hobbock) mit laufender Nummer je Erzeugnis, nur
+/// bei `Erzeugnistyp.eimerEinzeln`. Sein Gewicht steht nicht hier, sondern
+/// ergibt sich wie der Bestand aus der Summe seiner Buchungen: Zugang mit dem
+/// gewogenen Gewicht, Abgänge beim Auslagern oder Abfüllen. Ist die Summe
+/// kleiner als beim Einlagern, ist der Eimer angebrochen; bei 0 ist er leer.
+model Eimer {
+  id             String       @id @default(cuid())
+  erzeugnistypId String
+  erzeugnistyp   Erzeugnistyp @relation(fields: [erzeugnistypId], references: [id], onDelete: Cascade)
+  nummer         Int
+
+  createdAt DateTime @default(now())
+
+  buchungen ErzeugnisBuchung[]
+
+  @@unique([erzeugnistypId, nummer])
+}
+
+/// Ein Gebinde, in dem ein Erzeugnis abgefüllt wird (z.B. "Eimer 25 kg",
+/// "Glas 500 g") - je Erzeugnistyp frei definierbar (Honig braucht andere
+/// Gebinde als Wachs), mit Inhalt in der Einheit des Erzeugnistyps. Bucht man
+/// mit Gebinde, ergibt sich die Menge aus Anzahl × Inhalt - wie schon bei
+/// Zarge/Honigraumaufsatz, wo aus Stückzahl und Stammdaten-Gewicht gerechnet
+/// wird, statt Kilogramm selbst ausrechnen und eintippen zu lassen.
+model Gebinde {
+  id             String       @id @default(cuid())
+  erzeugnistypId String
+  erzeugnistyp   Erzeugnistyp @relation(fields: [erzeugnistypId], references: [id], onDelete: Cascade)
+
+  name   String
+  inhalt Float
+  /// Freiwillig, nur mit eingeschaltetem Warenwert: Wert in Euro je Stück
+  /// dieses Gebindes (z.B. Glas 500 g = 6,50). Hat vor dem Preis je Einheit
+  /// des Erzeugnisses Vorrang. Leer = es gilt der Preis je Einheit.
+  preis  Float?
+
+  createdAt DateTime @default(now())
+
+  buchungen    ErzeugnisBuchung[]
+  sortenPreise SortenGebindePreis[]
+
+  @@index([erzeugnistypId])
+}
+
+/// Eine Sorte innerhalb eines Erzeugnistyps (z.B. bei Honig: Frühtracht,
+/// Waldhonig, Rapshonig, ...) - wie Gebinde je Erzeugnistyp frei definierbar,
+/// ein paar gängige Honigsorten sind vorgegeben (`vorgegeben`), weitere
+/// lassen sich beim Buchen direkt mit anlegen.
+model Sorte {
+  id             String       @id @default(cuid())
+  erzeugnistypId String
+  erzeugnistyp   Erzeugnistyp @relation(fields: [erzeugnistypId], references: [id], onDelete: Cascade)
+
+  name        String
+  vorgegeben  Boolean @default(false)
+  reihenfolge Int     @default(0)
+  /// Warenwert: Preis je Einheit (je kg) dieser Sorte für Eimer und lose
+  /// Menge. Leer = Preis je Einheit des Erzeugnisses.
+  preis       Float?
+
+  createdAt DateTime @default(now())
+
+  buchungen     ErzeugnisBuchung[]
+  gebindePreise SortenGebindePreis[]
+
+  @@unique([erzeugnistypId, name])
+  @@index([erzeugnistypId])
+}
+
+/// Eine Zu- oder Abgangsbuchung im Erzeugnis-Lager: positive Menge = Zugang
+/// (z.B. Ernte, Zukauf), negative Menge = Abgang (z.B. Verkauf, Verbrauch).
+/// Der aktuelle Bestand eines Erzeugnistyps ist die Summe seiner Buchungen -
+/// bewusst kein eigenes Bestandsfeld, das aus dem Takt geraten könnte.
+/// Warenwert: Preis je Stück eines Gebindes für eine bestimmte Sorte (z.B.
+/// Waldhonig Glas 500 g = 9,00 €). Hat Vorrang vor Gebinde.preis. Eimer und
+/// Hobbocks rechnen immer je kg (Sorte.preis), nicht je Stück.
+model SortenGebindePreis {
+  sorteId   String
+  sorte     Sorte   @relation(fields: [sorteId], references: [id], onDelete: Cascade)
+  gebindeId String
+  gebinde   Gebinde @relation(fields: [gebindeId], references: [id], onDelete: Cascade)
+  preis     Float
+
+  @@id([sorteId, gebindeId])
+  @@index([gebindeId])
+}
+
+model ErzeugnisBuchung {
+  id             String       @id @default(cuid())
+  erzeugnistypId String
+  erzeugnistyp   Erzeugnistyp @relation(fields: [erzeugnistypId], references: [id], onDelete: Cascade)
+
+  menge   Float
+  datum   DateTime @default(now())
+  /// Kurzer Grund/Anlass, z.B. "Ernte", "Verkauf an ...", "Umfüllen".
+  grund   String?
+  notizen String?
+
+  /// Optional: Sorte aus dem Katalog (z.B. bei Honig: Waldhonig,
+  /// Rapshonig, ...) - wie beim Gebinde nur ein Verweis, keine eigene Kopie
+  /// des Namens nötig (Sorte.name trägt ihn).
+  sorteId String?
+  sorte   Sorte?  @relation(fields: [sorteId], references: [id], onDelete: SetNull)
+
+  /// Optional, nur bei Honig: "UNBEARBEITET" (noch nicht gerührt) oder
+  /// "GERUEHRT" - leer = keine Angabe. Bewusst ein freies Textfeld statt
+  /// Enum, Klartext siehe HONIG_ZUSTAENDE in lib/lager.ts.
+  zustand String?
+
+  /// Optional: diese Buchung lief über ein Gebinde (Eimer, Glas, ...) -
+  /// `anzahl` ist dann die Stückzahl, `menge` bleibt trotzdem die
+  /// maßgebliche Größe (= gebinde.inhalt × anzahl, mit Vorzeichen), damit
+  /// der Bestand immer eine einfache Summe ist, ob mit oder ohne Gebinde
+  /// gebucht.
+  gebindeId String?
+  gebinde   Gebinde? @relation(fields: [gebindeId], references: [id], onDelete: SetNull)
+  anzahl    Int?
+
+  /// Nur bei einzeln geführten Eimern: zu welchem Eimer die Buchung gehört
+  /// (Zugang mit anzahl 1, Abgang mit -1 oder 0, wenn ein Rest drin bleibt).
+  eimerId String?
+  eimer   Eimer?  @relation(fields: [eimerId], references: [id], onDelete: SetNull)
+
+  /// Optional: wo diese Menge lagert.
+  lagerortId String?
+  lagerort   Lagerort? @relation(fields: [lagerortId], references: [id], onDelete: SetNull)
+
+  /// Optionaler Bezug, wenn die Buchung aus einer Honigernte an der
+  /// Stockkarte stammt (Rückfrage beim Speichern des Eintrags) - rein zur
+  /// Nachvollziehbarkeit, die Buchung bleibt eigenständig erhalten, auch wenn
+  /// Volk oder Eintrag später verschwinden.
+  volkId String?
+  volk   Volk?   @relation(fields: [volkId], references: [id], onDelete: SetNull)
+
+  stockkartenEintragId String?
+  stockkartenEintrag   StockkartenEintrag? @relation(fields: [stockkartenEintragId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([erzeugnistypId])
+  @@index([sorteId])
+  @@index([gebindeId])
+  @@index([eimerId])
+  @@index([lagerortId])
+  @@index([volkId])
+  @@index([stockkartenEintragId])
+}
+
+/// Wie die Waben in einem aufgesetzten Honigraum beschaffen waren.
+enum Wabenbeschaffenheit {
+  MITTELWAENDE
+  AUSGEBAUT
+  GEMISCHT
+}
+
+/// Ein Honigraum, der auf einem Volk sitzt: bei einer Durchsicht aufgesetzt,
+/// bei einer späteren abgenommen und geerntet.
+///
+/// Dadurch weiß die App bei der Ernte, was überhaupt oben steht, statt es
+/// jedes Mal neu eintippen zu lassen - und man sieht, wie lange ein Honigraum
+/// schon drauf ist.
+model Honigraumaufsatz {
+  id     String @id @default(cuid())
+  volkId String
+  volk   Volk   @relation(fields: [volkId], references: [id], onDelete: Cascade)
+
+  zargeId         String?
+  zarge           Zarge?  @relation(fields: [zargeId], references: [id], onDelete: SetNull)
+  /// Klartext, z.B. "Zander Flachzarge (2/3), 10 Waben" - bleibt lesbar, auch
+  /// wenn die Zarge später aus den Einstellungen verschwindet.
+  bezeichnung     String
+  /// Durchschnittsertrag zum Zeitpunkt des Aufsetzens, als Kopie.
+  honigProZargeKg Float
+
+  wabenbeschaffenheit Wabenbeschaffenheit?
+
+  aufgesetztAm        DateTime
+  aufgesetztEintragId String?
+  aufgesetztEintrag   StockkartenEintrag? @relation("AufsatzAufgesetzt", fields: [aufgesetztEintragId], references: [id], onDelete: Cascade)
+
+  /// Solange leer, sitzt der Honigraum noch auf dem Volk.
+  geerntetAm        DateTime?
+  geerntetEintragId String?
+  geerntetEintrag   StockkartenEintrag? @relation("AufsatzGeerntet", fields: [geerntetEintragId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([volkId])
+  @@index([aufgesetztEintragId])
+  @@index([geerntetEintragId])
+}
+
+/// Ein Testzugang: Frank lädt per persönlichem Link bis zu fünf Tester ein.
+/// Zuerst nur Einladung (name/passwortHash leer), beim ersten Besuch des Links
+/// vergibt der Tester Name und Passwort. Seine Daten liegen in einem eigenen
+/// Datenbank-Schema "tester_<id>" mit denselben Tabellen wie Franks Daten
+/// (siehe web/src/lib/testzugang.ts) - die Tabelle selbst wird nur in Franks
+/// Schema benutzt.
+model Testzugang {
+  id                 String    @id @default(cuid())
+  /// Geheimer Teil des Einladungslinks.
+  einladungToken     String    @unique
+  /// Franks eigene Notiz, für wen der Link gedacht ist.
+  notiz              String?
+  /// Vom Tester gewählter Name, zugleich sein Benutzername beim Anmelden.
+  name               String?
+  /// Kleingeschriebener Name, damit "Max" und "max" nicht doppelt vergeben werden.
+  nameKlein          String?   @unique
+  passwortHash       String?
+  /// Sitzungs-Cookies, die vor diesem Zeitpunkt ausgestellt wurden, gelten
+  /// nicht mehr (gesetzt beim Zurücksetzen des Passworts).
+  sitzungenGueltigAb DateTime?
+  /// Wann der Tester den Hinweis zur Testinstanz bestätigt und sein Konto angelegt hat.
+  eingerichtetAm     DateTime?
+  letzteAnmeldung    DateTime?
+  erstelltAm         DateTime  @default(now())
+}
+
+/// Zugang zum Postausgangsserver (SMTP) für den Versand von Dokumenten per
+/// E-Mail - unter Einstellungen → E-Mail eingetragen, je Konto getrennt.
+/// Genau ein Datensatz (feste id "standard"); fehlt er, ist der Versand aus
+/// und der Knopf unter Dokumente verschwindet.
+model MailEinstellung {
+  id                     String    @id @default("standard")
+  host                   String
+  port                   Int
+  benutzer               String?
+  /// Verschlüsselt mit einem aus ANMELDUNG_GEHEIMNIS abgeleiteten Schlüssel
+  /// (siehe web/src/lib/geheim.ts), nie im Klartext.
+  passwortVerschluesselt String?
+  absender               String
+  /// Wann zuletzt eine Testmail mit genau diesen Angaben durchging. Erst
+  /// danach erscheint der Knopf unter Dokumente; jede Änderung setzt es zurück.
+  getestetAm             DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Zuletzt benutzte Empfänger beim Versenden von Dokumenten per E-Mail - als
+/// Vorschlag im Versand-Dialog. Je Konto getrennt (liegt wie alles andere im
+/// eigenen Schema), es werden nur die letzten paar aufgehoben.
+model MailEmpfaenger {
+  adresse   String   @id
+  zuletztAm DateTime @default(now())
+}
+
+/// Fundmeldung der Asiatischen Hornisse (Vespa velutina) aus der
+/// Meldeplattform der LUBW, abgerufen über deren öffentlichen Kartendienst
+/// (siehe web/src/lib/velutina.ts). Öffentliche Daten, für alle Konten gleich:
+/// befüllt und gelesen wird nur die Tabelle im Schema "public", in den
+/// Schemas der Testzugänge bleibt sie leer.
+model VelutinaMeldung {
+  /// Aus Fundort-Nummer, Funddatum und Art gebildet - ändert die LUBW eine
+  /// Meldung von "Einzeltier" auf "Nest", ist das eine neue Meldung.
+  id                  String    @id
+  /// "NEST" oder "EINZELTIER"
+  art                 String
+  /// Funddatum laut Meldung.
+  datum               DateTime
+  /// Wann die LUBW die Meldung nach Prüfung freigegeben hat.
+  eingestelltAm       DateTime?
+  /// Nummer der Meldung, z.B. "2026-08-3064" (aus dem Fundortnamen).
+  meldungsNr          String?
+  breitengrad         Float
+  laengengrad         Float
+  /// Ungenauigkeit des Fundpunkts in Metern, falls angegeben.
+  unschaerfeM         Float?
+  /// Die folgenden vier Spalten stammen aus der wieder zurückgenommenen
+  /// Erweiterung auf ganz Deutschland (PR #57, GBIF). Sie werden nicht mehr
+  /// benutzt, bleiben aber in der Datenbank, damit keine Migration Spalten
+  /// löschen muss. Alle Meldungen sind LUBW/BW.
+  quelle              String    @default("LUBW")
+  bundesland          String    @default("BW")
+  herkunft            String?
+  link                String?
+  /// Wann die Meldung hier zum ersten Mal auftauchte - danach richtet sich
+  /// "neu" auf der Velutina-Seite und welche Meldungen per Mail gehen.
+  /// Altbestand vom allerersten Abruf steht auf 01.01.2000 und löst nie eine
+  /// Warnung aus (siehe ALTBESTAND in web/src/lib/velutina.ts).
+  erstmalsAbgerufenAm DateTime  @default(now())
+  /// Beim letzten erfolgreichen Abruf noch im Dienst enthalten? Was dort
+  /// verschwindet, wird hier ebenfalls entfernt.
+  zuletztGesehenAm    DateTime  @default(now())
+
+  @@index([datum])
+  @@index([quelle])
+}
+
+/// Stand des regelmäßigen Abrufs bei der LUBW. Genau ein Datensatz (feste id
+/// "standard"), nur im Schema "public".
+model VelutinaAbruf {
+  id             String    @id @default("standard")
+  letzterVersuch DateTime?
+  letzterErfolg  DateTime?
+  /// Fehlermeldung des letzten Versuchs, leer wenn er geklappt hat.
+  fehler         String?
+  anzahl         Int       @default(0)
+}
+
+/// Einstellungen zur Velutina-Warnung, je Konto. Genau ein Datensatz (feste
+/// id "standard"), fehlt er, gelten die Vorgaben.
+model VelutinaEinstellung {
+  id              String    @id @default("standard")
+  /// Meldungen bis zu diesem Abstand von einem Stand gelten als akut (rot).
+  akutRadiusM     Int       @default(2000)
+  /// Bis zu diesem Abstand als Warnung (gelb), muss größer als akut sein.
+  warnRadiusM     Int       @default(5000)
+  /// Meldungen, die bis hierhin auftauchten, hat Frank als gesehen abgehakt.
+  gesehenBis      DateTime?
+  /// Zusätzlich per E-Mail benachrichtigen (nur wenn Mail eingerichtet ist).
+  mailAn          Boolean   @default(true)
+  /// Bis zu welchem Abruf neue Meldungen schon per Mail geprüft wurden.
+  mailGeprueftBis DateTime?
+  /// Aus der zurückgenommenen Bundesländer-Auswahl (PR #57), unbenutzt.
+  bundeslaender   String[]  @default(["BW"])
+}
+
+/// Nestsuche per Locktopf und Peilung (Triangulation): ein Suchvorgang mit
+/// seinen Locktöpfen und den Beobachtungen markierter Hornissen. Je Konto.
+model VelutinaNestsuche {
+  id              String             @id @default(cuid())
+  name            String
+  notiz           String?
+  angelegtAm      DateTime           @default(now())
+  /// Gesetzt, sobald die Suche beendet ist (mit oder ohne Fund).
+  abgeschlossenAm DateTime?
+  /// Wo das Nest tatsächlich gefunden wurde, falls gefunden.
+  nestBreitengrad Float?
+  nestLaengengrad Float?
+  /// Gesetzt, wenn eine abgeschlossene Suche ins Archiv verschoben wurde
+  /// (bleibt zum Nachlesen erhalten, taucht aber nicht mehr in der Liste auf).
+  archiviertAm    DateTime?
+  locktoepfe      VelutinaLocktopf[]
+}
+
+model VelutinaLocktopf {
+  id            String                    @id @default(cuid())
+  sucheId       String
+  suche         VelutinaNestsuche         @relation(fields: [sucheId], references: [id], onDelete: Cascade)
+  name          String
+  breitengrad   Float
+  laengengrad   Float
+  angelegtAm    DateTime                  @default(now())
+  beobachtungen VelutinaFlugbeobachtung[]
+
+  @@index([sucheId])
+}
+
+/// Eine markierte Hornisse an einem Locktopf: Abflugrichtung und die
+/// gestoppten Rundzeiten (Abflug bis Rückkehr), die kürzeste zählt.
+model VelutinaFlugbeobachtung {
+  id             String           @id @default(cuid())
+  locktopfId     String
+  locktopf       VelutinaLocktopf @relation(fields: [locktopfId], references: [id], onDelete: Cascade)
+  /// Markierung als Text, z. B. "Gelb" oder "Gelb/Rot".
+  markierung     String
+  /// Anzeigefarbe auf der Karte (#rrggbb).
+  farbe          String
+  /// Abflugrichtung in Grad, geografisch Nord = 0, im Uhrzeigersinn.
+  richtungGrad   Float?
+  /// "KARTE" (eingezeichnet) oder "KOMPASS" (Handy in Flugrichtung).
+  richtungQuelle String?
+  /// Wie genau die Richtung ist, +/- Grad.
+  toleranzGrad   Int              @default(10)
+  rundzeitenSek  Int[]            @default([])
+  /// Laufende Stoppuhr: Zeitpunkt des letzten Abflugs, bis zur Rückkehr.
+  abflugAm       DateTime?
+  notiz          String?
+  angelegtAm     DateTime         @default(now())
+
+  @@index([locktopfId])
+}
+
+/// Einstellungen fürs Lager, die nicht an einem Erzeugnis hängen. Eine
+/// einzige Zeile; fehlt sie, gilt alles als aus.
+model Lagereinstellung {
+  id        String   @id @default("standard")
+  /// Warenwert im Lager zeigen (Preise je Einheit/Gebinde, Wert je Posten).
+  /// Aus = wie bisher, gespeicherte Preise bleiben erhalten.
+  warenwert Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+/// Welche Bereiche der App ausgeblendet sind (Einstellungen -> Bereiche).
+/// Eine einzige Zeile; leer = alles an. Ausgeblendet heißt nur nicht
+/// sichtbar - die Daten bleiben unverändert erhalten. Schlüssel siehe
+/// web/src/lib/bereiche.ts.
+model Bereichswahl {
+  id           String   @id @default("standard")
+  abgeschaltet String[]
+  updatedAt    DateTime @updatedAt
+}
+
+/// Hauptzugang einer selbst installierten Instanz, angelegt vom
+/// Einrichtungsassistenten beim ersten Start (siehe web/src/lib/hauptzugang.ts).
+/// Bleibt leer, wenn die Zugangsdaten aus den Umgebungsvariablen
+/// ANMELDUNG_BENUTZERNAME/ANMELDUNG_PASSWORT kommen (Franks eigene Instanz).
+model Hauptzugang {
+  id           String   @id @default("standard")
+  benutzername String
+  passwortHash String
+  erstelltAm   DateTime @default(now())
+}
+
+/// Stufe eines Helfer-Zugangs (Einstellungen -> Helfer).
+enum NutzerStufe {
+  /// Darf alles ansehen und Daten eintragen, ändern und löschen. Keine
+  /// Einstellungen, keine Verwaltung der Zugänge.
+  SCHREIBEN
+  /// Darf nur ansehen.
+  LESEN
+}
+
+/// Helfer, die mit an Franks Daten arbeiten (Familie, Mitimker). Anders als
+/// Testzugänge haben sie keinen eigenen Datenbereich, sondern sehen dieselben
+/// Stände und Völker wie der Hauptzugang. Der Admin legt sie mit einem
+/// Startpasswort an, das sie beim ersten Anmelden ändern müssen (siehe
+/// web/src/lib/nutzer.ts). Liegt nur im Schema "public".
+model Nutzer {
+  id                 String      @id @default(cuid())
+  /// Anzeigename, zugleich Benutzername beim Anmelden.
+  name               String
+  /// Kleingeschriebener Name, damit "Anna" und "anna" nicht doppelt vergeben werden.
+  nameKlein          String      @unique
+  passwortHash       String
+  stufe              NutzerStufe @default(SCHREIBEN)
+  /// Gesetzt beim Anlegen und beim Zurücksetzen durch den Admin: Der Helfer
+  /// muss erst ein eigenes Passwort vergeben, bevor er etwas anderes sieht.
+  passwortAendern    Boolean     @default(true)
+  /// Gesperrte Helfer können sich nicht anmelden, ihre Sitzungen enden sofort.
+  aktiv              Boolean     @default(true)
+  /// Sitzungs-Cookies, die vor diesem Zeitpunkt ausgestellt wurden, gelten
+  /// nicht mehr (Zurücksetzen, Sperren, Passwortwechsel).
+  sitzungenGueltigAb DateTime?
+  letzteAnmeldung    DateTime?
+  erstelltAm         DateTime    @default(now())
+  /// Freiwillig. Dorthin gehen der Link zur App, der Hinweis nach dem
+  /// Zurücksetzen und der Link bei "Passwort vergessen". Nie ein Passwort.
+  email              String?
+  /// "Passwort vergessen": nur der SHA-256-Wert des Links liegt hier, der
+  /// Link selbst steht nur in der Mail. Gilt bis `resetGueltigBis`, einmal.
+  resetTokenHash     String?     @unique
+  resetGueltigBis    DateTime?
+  /// Wann zuletzt ein Link angefordert wurde, gegen Mailflut.
+  resetAngefordertAm DateTime?
+}
+
+/// Änderungsprotokoll: wer wann was angelegt, geändert oder gelöscht hat.
+/// Wird automatisch im Datenbankzugriff geschrieben (web/src/lib/historie.ts),
+/// nur angehängt, nie geändert. Beginnt leer am Tag der Einführung.
+model Historie {
+  id          String   @id @default(cuid())
+  zeitpunkt   DateTime @default(now())
+  /// "admin", "nutzer" (Helfer) oder "tester".
+  kontoArt    String
+  /// Kennung des Helfers, leer beim Admin.
+  nutzerId    String?
+  /// Name zum Zeitpunkt der Änderung, bleibt lesbar, auch wenn der Zugang
+  /// später entfernt wird.
+  nutzerName  String
+  /// "angelegt", "geaendert" oder "geloescht".
+  aktion      String
+  /// Prisma-Modell, z.B. "stockkartenEintrag".
+  modell      String
+  datensatzId String?
+  /// Stand vor und nach der Änderung (bei Sammeländerungen die Bedingung
+  /// und die Zahl der betroffenen Datensätze).
+  vorher      Json?
+  nachher     Json?
+  /// Zum Filtern nach Volk oder Stand.
+  volkId        String?
+  bienenstandId String?
+
+  @@index([zeitpunkt])
+  @@index([modell, datensatzId])
+  @@index([volkId])
+}
+
+/// Update-Prüfung einer selbst installierten Instanz (siehe
+/// web/src/lib/update.ts): Der Server fragt einmal am Tag bei GitHub nach
+/// neuen Versionen und merkt sich hier das Ergebnis. Genau ein Datensatz
+/// (feste id "standard"), nur im Schema "public".
+model UpdateStand {
+  id              String    @id @default("standard")
+  /// Schalter unter Einstellungen -> System. Standard: an.
+  pruefungAn      Boolean   @default(true)
+  letztePruefung  DateTime?
+  /// Fehlermeldung der letzten Prüfung, leer wenn sie geklappt hat.
+  fehler          String?
+  /// Alle Versionen, die neuer sind als die laufende, neueste zuerst:
+  /// [{ version, titel, datum, text, adresse }].
+  neuere          Json?
+  /// "Später": Band bis zu diesem Zeitpunkt ausblenden.
+  spaeterBis      DateTime?
+  /// "Diese Version überspringen": Band erst bei einer noch neueren Version.
+  uebersprungen   String?
+}

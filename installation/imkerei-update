@@ -1,0 +1,303 @@
+#!/usr/bin/env bash
+# Spielt ein Update der Imkereiverwaltung ein. Aufruf als root:
+#
+#   sudo imkerei-update             neueste Version holen
+#   sudo imkerei-update --zurueck   zurück auf die Version vor dem letzten Update
+#
+# Das Installationsskript legt es unter /usr/local/sbin ab. Der Knopf in der
+# App (Einstellungen -> System) startet es über den Dienst
+# imkerei-update.service (siehe imkerei-update.path), dann mit --aus-app.
+#
+# Ablauf:
+#   1. Freien Speicherplatz prüfen.
+#   2. Neue Version herunterladen. Ist sie dieselbe wie die laufende: fertig.
+#   3. Datenbank sichern nach /opt/imkereiverwaltung/sicherungen (die
+#      letzten 5 bleiben). Klappt das nicht: Abbruch, kein Update.
+#   4. App mit der neuen Version starten. Sie passt dabei die Datenbank an.
+#   5. Warten, bis die Gesundheitsprüfung (/api/gesund) "gesund" meldet.
+#   6. Kommt die App nicht hoch: automatisch zurück auf die alte Version und
+#      die Sicherung von eben.
+#   7. Alte Images aufräumen.
+#
+# Fotos ändern sich durch Updates nicht und werden nicht mitgesichert.
+
+set -Eeuo pipefail
+
+ORDNER="${IMKEREI_ORDNER:-/opt/imkereiverwaltung}"
+SICHERUNGEN="$ORDNER/sicherungen"
+STEUERUNG="$ORDNER/steuerung"
+SIGNAL="$STEUERUNG/update-angefordert"
+STATUS="$STEUERUNG/update-status.json"
+PROTOKOLL="${IMKEREI_PROTOKOLL:-/var/log/imkerei-update.log}"
+BEHALTEN=5
+MIN_FREI_MB="${IMKEREI_MIN_FREI_MB:-2048}"
+# So lange darf die neue Version zum Starten brauchen (mit Datenbank-Umbau).
+WARTEN_S="${IMKEREI_WARTEN_S:-300}"
+VORHER_BILD="imkereiverwaltung-vorher:letzte"
+
+hinweis() { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
+warnung() { printf '\n\033[1;33mAchtung: %s\033[0m\n' "$*"; }
+
+modus="update"
+aus_app=0
+ohne_rueckfrage=0
+for arg in "$@"; do
+  case "$arg" in
+    --zurueck) modus="zurueck" ;;
+    --aus-app) aus_app=1 ;;
+    --ja) ohne_rueckfrage=1 ;;
+    -h|--hilfe|--help)
+      sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) echo "Unbekannte Angabe: $arg (Hilfe: imkerei-update --hilfe)" >&2; exit 2 ;;
+  esac
+done
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Bitte als root starten: sudo imkerei-update" >&2
+  exit 1
+fi
+[ -f "$ORDNER/docker-compose.yml" ] || { echo "Keine Installation in $ORDNER gefunden." >&2; exit 1; }
+cd "$ORDNER"
+mkdir -p "$SICHERUNGEN" "$STEUERUNG"
+chmod 700 "$SICHERUNGEN"
+
+# Die Bitte aus der App gleich wegräumen, sonst startet systemd den Dienst
+# erneut, solange die Datei liegt. rm entfernt einen Link nur selbst, folgt
+# ihm nicht.
+[ "$aus_app" -eq 1 ] && rm -f "$SIGNAL"
+
+# Alles zusätzlich ins Protokoll.
+exec > >(tee -a "$PROTOKOLL") 2>&1
+echo
+echo "=== imkerei-update $modus, $(date '+%Y-%m-%d %H:%M:%S') ==="
+
+# Nur ein Lauf gleichzeitig.
+exec 9>/run/imkerei-update.lock
+if ! flock -n 9; then
+  echo "Es läuft schon ein Update." >&2
+  exit 1
+fi
+
+# --- Hilfsfunktionen --------------------------------------------------------
+
+wert() { grep -E "^$1=" .env 2>/dev/null | tail -n1 | cut -d= -f2- || true; }
+# Wie in docker-compose.yml: Etikett "1" = immer die neueste 1.x.
+bild_name="$(wert IMKEREI_IMAGE)"
+bild_etikett="$(wert IMKEREI_VERSION)"
+BILD="${bild_name:-ghcr.io/frawoer79/imkerei_verwaltung}:${bild_etikett:-1}"
+
+json_text() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' '; }
+
+# Stand für die App (Einstellungen -> System). Erst in eine neue Datei, dann
+# umbenennen: so liest die App nie eine halbe Datei, und ein Link, den
+# jemand im Container an diese Stelle gelegt hat, wird ersetzt statt
+# beschrieben.
+von_version=""
+nach_version=""
+status() {
+  local zustand="$1" schritt="$2" meldung="${3:-}"
+  local tmp
+  tmp="$(mktemp "$STEUERUNG/.status.XXXXXX")"
+  printf '{"zustand":"%s","schritt":"%s","meldung":"%s","von":"%s","nach":"%s","zeit":"%s"}\n' \
+    "$zustand" "$(json_text "$schritt")" "$(json_text "$meldung")" \
+    "$(json_text "$von_version")" "$(json_text "$nach_version")" "$(date -Iseconds)" > "$tmp"
+  chmod 644 "$tmp"
+  mv -f "$tmp" "$STATUS"
+}
+
+version_von() {
+  docker image inspect -f '{{index .Config.Labels "org.opencontainers.image.version"}}' "$1" 2>/dev/null || true
+}
+
+app_container() { docker compose ps -q app 2>/dev/null || true; }
+
+laufendes_bild() {
+  local id
+  id="$(app_container)"
+  if [ -n "$id" ]; then
+    docker inspect -f '{{.Image}}' "$id"
+  else
+    docker image inspect -f '{{.Id}}' "$BILD" 2>/dev/null || true
+  fi
+}
+
+warten_gesund() {
+  local bis=$((SECONDS + WARTEN_S)) zustand id
+  while [ "$SECONDS" -lt "$bis" ]; do
+    id="$(app_container)"
+    zustand="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}keine{{end}}' "$id" 2>/dev/null || echo weg)"
+    [ "$zustand" = "healthy" ] && return 0
+    sleep 5
+  done
+  return 1
+}
+
+datenbank_bereit() {
+  docker compose up -d db >/dev/null
+  for _ in $(seq 1 60); do
+    docker compose exec -T db pg_isready -U imkerei -d imkerei >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  return 1
+}
+
+frei_mb() { df -Pm "$1" | awk 'NR==2 {print $4}'; }
+
+# Spielt eine Sicherung zurück: Datenbank komplett löschen und neu anlegen,
+# dann den Stand aus der Datei laden. Die App muss dabei gestoppt sein.
+sicherung_einspielen() {
+  local datei="$1"
+  docker compose exec -T db psql -q -v ON_ERROR_STOP=1 -U imkerei -d postgres \
+    -c 'DROP DATABASE IF EXISTS imkerei WITH (FORCE)' -c 'CREATE DATABASE imkerei'
+  docker compose exec -T db pg_restore -U imkerei -d imkerei --no-owner --exit-on-error < "$datei"
+}
+
+# Zurück auf das gemerkte Image und die Sicherung (sicherungen/vorher.env).
+zurueck() {
+  local grund="$1"
+  # shellcheck disable=SC1091
+  . "$SICHERUNGEN/vorher.env"
+  nach_version="${VORHER_VERSION:-}"
+  status laeuft "Gehe zurück auf die alte Version" "$grund"
+  hinweis "Gehe zurück auf Version ${VORHER_VERSION:-?} mit der Sicherung $(basename "$VORHER_SICHERUNG") ..."
+  docker compose stop app >/dev/null 2>&1 || true
+  datenbank_bereit || { status fehler "Zurückgehen fehlgeschlagen" "Datenbank startet nicht."; exit 1; }
+  if ! sicherung_einspielen "$VORHER_SICHERUNG"; then
+    status fehler "Zurückgehen fehlgeschlagen" "Sicherung ließ sich nicht einspielen. Protokoll: $PROTOKOLL"
+    exit 1
+  fi
+  docker tag "$VORHER_BILD" "$BILD"
+  docker compose up -d app
+  if warten_gesund; then
+    status zurueck "Zurück auf Version ${VORHER_VERSION:-?}" "$grund"
+    hinweis "Die App läuft wieder mit Version ${VORHER_VERSION:-?}."
+    return 0
+  fi
+  status fehler "App startet auch mit der alten Version nicht" "Protokoll: $PROTOKOLL"
+  warnung "Die App startet auch mit der alten Version nicht. Protokoll: docker compose logs app"
+  exit 1
+}
+
+# Bricht ein Schritt unerwartet ab, soll die App nicht ewig "läuft" zeigen.
+trap 'status fehler "Abgebrochen" "Unerwarteter Fehler. Protokoll: $PROTOKOLL"' ERR
+
+# --- Zurück von Hand --------------------------------------------------------
+
+if [ "$modus" = "zurueck" ]; then
+  if [ ! -f "$SICHERUNGEN/vorher.env" ] || ! docker image inspect "$VORHER_BILD" >/dev/null 2>&1; then
+    echo "Es gibt kein Update, zu dem man zurückgehen könnte." >&2
+    exit 1
+  fi
+  von_version="$(version_von "$(laufendes_bild)")"
+  # shellcheck disable=SC1091
+  . "$SICHERUNGEN/vorher.env"
+  echo "Zurück auf Version ${VORHER_VERSION:-?} mit der Sicherung vom $(date -r "$VORHER_SICHERUNG" '+%d.%m.%Y %H:%M')."
+  echo "Alles, was seitdem eingetragen wurde, geht dabei verloren."
+  if [ "$ohne_rueckfrage" -eq 0 ]; then
+    read -r -p "Wirklich zurückgehen? (ja/nein) " antwort </dev/tty
+    [ "$antwort" = "ja" ] || { echo "Nichts geändert."; exit 0; }
+  fi
+  zurueck "Von Hand zurückgegangen."
+  exit 0
+fi
+
+# --- Update -----------------------------------------------------------------
+
+alt_id="$(laufendes_bild)"
+von_version="$(version_von "$alt_id")"
+status laeuft "Prüfe Speicherplatz"
+
+docker_ordner="$(docker info -f '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
+for ort in "$docker_ordner" "$SICHERUNGEN"; do
+  frei="$(frei_mb "$ort")"
+  if [ "$frei" -lt "$MIN_FREI_MB" ]; then
+    meldung="Auf der Festplatte sind nur noch $frei MB frei, gebraucht werden $MIN_FREI_MB MB. Erst aufräumen, z.B. mit: docker system prune"
+    status fehler "Zu wenig Speicherplatz" "$meldung"
+    warnung "$meldung"
+    exit 1
+  fi
+done
+
+hinweis "Lade die neueste Version ($BILD) ..."
+status laeuft "Lade die neue Version"
+if ! docker compose pull -q app; then
+  status fehler "Herunterladen fehlgeschlagen" "Keine Verbindung zu ghcr.io? Protokoll: $PROTOKOLL"
+  warnung "Die neue Version ließ sich nicht herunterladen."
+  exit 1
+fi
+neu_id="$(docker image inspect -f '{{.Id}}' "$BILD")"
+nach_version="$(version_von "$neu_id")"
+
+if [ -n "$alt_id" ] && [ "$neu_id" = "$alt_id" ]; then
+  status aktuell "Schon auf dem neuesten Stand"
+  hinweis "Schon auf dem neuesten Stand (Version ${von_version:-?})."
+  exit 0
+fi
+
+hinweis "Sichere die Datenbank ..."
+status laeuft "Sichere die Datenbank"
+if ! datenbank_bereit; then
+  status fehler "Datenbank startet nicht" "Kein Update eingespielt."
+  warnung "Die Datenbank startet nicht. Kein Update eingespielt."
+  exit 1
+fi
+sicherung="$SICHERUNGEN/datenbank-$(date +%Y-%m-%d-%H%M%S)${von_version:+-v$von_version}.dump"
+if ! docker compose exec -T db pg_dump -U imkerei -d imkerei -Fc > "$sicherung.teil" \
+  || [ ! -s "$sicherung.teil" ] \
+  || ! docker compose exec -T db pg_restore -l < "$sicherung.teil" >/dev/null; then
+  rm -f "$sicherung.teil"
+  status fehler "Sicherung fehlgeschlagen" "Kein Update eingespielt."
+  warnung "Die Sicherung hat nicht geklappt. Kein Update eingespielt."
+  exit 1
+fi
+mv "$sicherung.teil" "$sicherung"
+chmod 600 "$sicherung"
+echo "Gesichert: $sicherung ($(du -h "$sicherung" | cut -f1))"
+
+# Altes Image und Sicherung merken, für den Rückweg (auch später von Hand).
+# Den bisherigen Rückweg aufheben: geht dieses Update schief, gilt er wieder.
+frueher_id="$(docker image inspect -f '{{.Id}}' "$VORHER_BILD" 2>/dev/null || true)"
+[ -f "$SICHERUNGEN/vorher.env" ] && cp "$SICHERUNGEN/vorher.env" "$SICHERUNGEN/vorher.env.frueher"
+if [ -n "$alt_id" ]; then
+  docker tag "$alt_id" "$VORHER_BILD"
+  cat > "$SICHERUNGEN/vorher.env" <<VORHER
+VORHER_VERSION="$von_version"
+VORHER_SICHERUNG="$sicherung"
+VORHER_ZEIT="$(date -Iseconds)"
+VORHER
+fi
+
+hinweis "Starte Version ${nach_version:-?} ..."
+status laeuft "Starte die neue Version"
+docker compose up -d app
+
+if ! warten_gesund; then
+  warnung "Die neue Version meldet sich nicht als gesund. Letzte Zeilen ihres Protokolls:"
+  docker compose logs --tail 60 app || true
+  if [ -z "$alt_id" ]; then
+    status fehler "Neue Version startet nicht" "Es gab keine alte Version zum Zurückgehen. Protokoll: $PROTOKOLL"
+    exit 1
+  fi
+  zurueck "Version ${nach_version:-?} ist nicht gestartet. Deine Daten sind auf dem Stand von vor dem Update."
+  # Das Update gilt als nie geschehen: --zurueck führt wieder dorthin, wohin
+  # es vorher geführt hätte.
+  if [ -n "$frueher_id" ] && [ -f "$SICHERUNGEN/vorher.env.frueher" ]; then
+    docker tag "$frueher_id" "$VORHER_BILD"
+    mv -f "$SICHERUNGEN/vorher.env.frueher" "$SICHERUNGEN/vorher.env"
+  else
+    docker rmi "$VORHER_BILD" >/dev/null 2>&1 || true
+    rm -f "$SICHERUNGEN/vorher.env"
+  fi
+  exit 1
+fi
+rm -f "$SICHERUNGEN/vorher.env.frueher"
+
+# Aufräumen: nur die letzten Sicherungen behalten, Images ohne Namen löschen
+# (das gemerkte alte bleibt, es hat ja einen).
+ls -1t "$SICHERUNGEN"/datenbank-*.dump 2>/dev/null | tail -n +$((BEHALTEN + 1)) | xargs -r rm -f
+docker image prune -f >/dev/null || true
+
+status fertig "Update eingespielt"
+hinweis "Fertig. Die App läuft jetzt mit Version ${nach_version:-?}."

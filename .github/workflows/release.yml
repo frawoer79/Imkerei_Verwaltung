@@ -1,0 +1,128 @@
+# Freigabe einer neuen Version. Läuft, sobald ein Tag wie "v1.4.0" ins
+# Repository kommt (Frank sagt "Release", Claude setzt den Tag).
+#
+# Läuft nur im öffentlichen Repository (frawoer79/Imkerei_Verwaltung). Das
+# private Arbeitsrepo hat dieselbe Datei, dort passiert bei einem Tag nichts
+# (siehe werkstatt/LIESMICH.md).
+#
+#   1. Baut das Docker-Image aus web/ mit der Versionsnummer darin und legt es
+#      nach ghcr.io/frawoer79/imkerei_verwaltung, mit den Etiketten
+#      "1.4.0", "1.4" und "1". Installationen beziehen "1" und bekommen so
+#      alle 1.x, aber nie von selbst 2.0.
+#   2. Legt das GitHub-Release an. Die Änderungsliste kommt aus
+#      AENDERUNGEN.md (Abschnitt "## 1.4.0"). Fehlt der Abschnitt, schreibt
+#      GitHub selbst eine Liste aus den Pull Requests.
+#
+# Der täglichen Update-Prüfung der Installationen (web/src/lib/update.ts)
+# reicht das Release. Franks Coolify baut weiter selbst aus main, davon
+# merkt es nichts.
+#
+# Den Tag kann Claude nicht selbst hochladen. Frank legt ihn auf GitHub an:
+# Releases -> Draft a new release -> Tag "v1.4.0" -> Publish release. Titel
+# und Text ersetzt dieser Ablauf dann aus AENDERUNGEN.md.
+#
+# Vorabversionen wie "v1.4.0-rc1" werden gebaut und als Vorabversion
+# markiert. Sie bekommen nur ihr eigenes Etikett, die Prüfung übergeht sie.
+
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Versionsnummer aus dem Tag
+        id: version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "vorab=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "vorab=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Paketnamen bei ghcr.io müssen klein geschrieben sein.
+      - name: Paketname
+        id: paket
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiketten
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.paket.outputs.name }}
+          flavor: latest=false
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+
+      - name: Image bauen und hochladen
+        uses: docker/build-push-action@v6
+        with:
+          context: web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: IMKEREI_APP_VERSION=${{ steps.version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Änderungsliste aus AENDERUNGEN.md
+        id: notizen
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Abschnitt von "## <Version>" bis zur nächsten "## "-Zeile.
+          awk -v v="$VERSION" '
+            /^## / { drin = ($2 == v); if (drin) { titel = substr($0, 4); next } }
+            drin { print }
+            END { if (titel != "") print titel > "titel.txt" }
+          ' AENDERUNGEN.md > notizen.md
+          if [ -s titel.txt ] && grep -q '[^[:space:]]' notizen.md; then
+            echo "eigene=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "eigene=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Release anlegen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          optionen=()
+          if [ "${{ steps.version.outputs.vorab }}" = "true" ]; then optionen+=(--prerelease); fi
+          # Wurde das Release von Hand auf GitHub angelegt (Tag dort erzeugt),
+          # bekommt es nur Titel und Text aus AENDERUNGEN.md.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            if [ "${{ steps.notizen.outputs.eigene }}" = "true" ]; then
+              gh release edit "$GITHUB_REF_NAME" --title "Version $(cat titel.txt)" --notes-file notizen.md
+            fi
+            exit 0
+          fi
+          if [ "${{ steps.notizen.outputs.eigene }}" = "true" ]; then
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Version $(cat titel.txt)" \
+              --notes-file notizen.md "${optionen[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --title "Version $VERSION" \
+              --generate-notes "${optionen[@]}"
+          fi

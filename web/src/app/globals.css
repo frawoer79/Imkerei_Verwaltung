@@ -1,0 +1,912 @@
+@import "tailwindcss";
+
+/* Tailwinds "dark:"-Klassen richten sich von Haus aus nur nach der
+   Systemeinstellung. Die App lässt sich aber per Umschalter fest auf hell
+   oder dunkel stellen - dann passten Seitenfarben (Variablen unten) und
+   "dark:"-Klassen nicht mehr zusammen: z.B. iPad im Dunkelmodus, App auf
+   hell -> dunkelrote Kacheln mit grauer Schrift. Deshalb gilt "dark:"
+   genau dann, wenn auch die dunklen Variablen gelten. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
+:root {
+  --background: #f1f4f0;
+  --foreground: #17191b;
+  --card: #ffffff;
+  --border: #e3e6e0;
+  /* Ränder von Bedienelementen (Felder, Knöpfe): mind. 3:1, damit sie auch im
+     Sonnenlicht zu erkennen sind. --border bleibt für Trennlinien. */
+  --rand-bedienung: #7d857c;
+  /* Ruhigere Zwischenstufe für Aufklapp-Abschnitte, Zeilen, Chips und
+     Zusatzknöpfe (1 px). Das eigentliche Bedienelement darin (Kästchen,
+     Schrift, Feld) bleibt kontrastreich. */
+  --rand-ruhig: #b5bbb3;
+  --muted: #696969;
+  --accent: #1f5c44;
+  --accent-foreground: #ffffff;
+  /* Fläche links/rechts neben der App auf breiten Monitoren (siehe unten). */
+  --umfeld: #dce2d9;
+  /* Ampelfarben (siehe lib/ampel.ts): Text, Fläche und Rand je Stufe. Die Texte
+     erreichen auf der jeweiligen Fläche und auf --card mind. 4,5:1. */
+  --ok: #166534;
+  --ok-flaeche: #f0fdf4;
+  --ok-rand: #86efac;
+  --warnung: #92400e; /* 7,1:1 auf Karte, 6,4:1 auf Hintergrund */
+  --warnung-flaeche: #fffbeb;
+  --warnung-rand: #fcd34d;
+  --gefahr: #b91c1c;
+  --gefahr-flaeche: #fef2f2;
+  --gefahr-rand: #fca5a5;
+  /* Gefüllte Gesamteindruck-Plakette je Stufe (Text mind. 4,5:1 auf der
+     Füllung). Gelb steckt in der Fläche, der dunklere Bernstein-Rand hebt
+     sie von der Karte ab (3,2:1). */
+  --ok-voll: #166534;
+  --ok-voll-text: #ffffff;
+  --warnung-voll: #fde68a;
+  --warnung-voll-text: #78350f;
+  --warnung-voll-rand: #d97706;
+  --gefahr-voll: #b91c1c;
+  --gefahr-voll-text: #ffffff;
+  /* Mini-Strahl im Verlauf: blasse Zonen, kräftige Marke mit dunklem Ring
+     (Ring gelb #a16207 auf Weiß 4,9:1). */
+  --zone-ok: #bbf7d0;
+  --zone-warnung: #fde68a;
+  --zone-gefahr: #fecaca;
+  --marke-ok: #22c55e;
+  --marke-warnung: #facc15;
+  --marke-gefahr: #ef4444;
+  --marke-ring-ok: #166534;
+  --marke-ring-warnung: #a16207;
+  --marke-ring-gefahr: #991b1b;
+  /* Nur von den neuen Designs genutzt (siehe unten), hier mit Werten, die
+     zum aktuellen Design passen. */
+  --flaeche: #e9ede7;
+  --honig: #d4900f;
+  --honig-flaeche: #fbefd3;
+  --honig-text: #7f5200;
+  --kopf: #1f5c44;
+  --kopf-text: #ffffff;
+  --kopf-leise: #bcd3c8;
+  /* Schatten für Kacheln und Felder (siehe unten bei "Kacheln und Felder").
+     Je Design ändern sich nur Farbe und Kante; die Form steht einmal hier.
+     Im Dunkelmodus kein Schatten (Faktor 0, Franks Vorgabe): auf fast
+     schwarzem Grund sieht man ihn ohnehin nicht. Dort heben sich Kacheln
+     und Flächen über ihre hellere Farbe ab (--card/--flaeche um 9 % zu Weiß
+     aufgehellt, Ränder und --muted nachgezogen, 21.10.2026). */
+  --schatten-farbe: 0 0 0;
+  --schatten-faktor: 1;
+  --schatten-kante: 0 0 #0000;
+  --schatten-kachel: var(--schatten-kante),
+    0 2px 5px rgb(var(--schatten-farbe) / calc(0.2 * var(--schatten-faktor))),
+    0 10px 24px rgb(var(--schatten-farbe) / calc(0.22 * var(--schatten-faktor)));
+  --schatten-feld: 0 2px 4px rgb(var(--schatten-farbe) / calc(0.24 * var(--schatten-faktor)));
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-rand-bedienung: var(--rand-bedienung);
+  --color-rand-ruhig: var(--rand-ruhig);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-umfeld: var(--umfeld);
+  --color-ok: var(--ok);
+  --color-ok-flaeche: var(--ok-flaeche);
+  --color-ok-rand: var(--ok-rand);
+  --color-warnung: var(--warnung);
+  --color-warnung-flaeche: var(--warnung-flaeche);
+  --color-warnung-rand: var(--warnung-rand);
+  --color-gefahr: var(--gefahr);
+  --color-gefahr-flaeche: var(--gefahr-flaeche);
+  --color-gefahr-rand: var(--gefahr-rand);
+  --color-ok-voll: var(--ok-voll);
+  --color-ok-voll-text: var(--ok-voll-text);
+  --color-warnung-voll: var(--warnung-voll);
+  --color-warnung-voll-text: var(--warnung-voll-text);
+  --color-warnung-voll-rand: var(--warnung-voll-rand);
+  --color-gefahr-voll: var(--gefahr-voll);
+  --color-gefahr-voll-text: var(--gefahr-voll-text);
+  --color-flaeche: var(--flaeche);
+  --color-honig: var(--honig);
+  --color-honig-flaeche: var(--honig-flaeche);
+  --color-honig-text: var(--honig-text);
+  --color-kopf: var(--kopf);
+  --color-kopf-text: var(--kopf-text);
+  --color-kopf-leise: var(--kopf-leise);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  /* shadow-md = Kachel, shadow-sm = Feld/kleines Element (Werte oben). */
+  --shadow-md: var(--schatten-kachel);
+  --shadow-sm: var(--schatten-feld);
+}
+
+/* Dunkel-Modus: einerseits automatisch nach Systemeinstellung (sofern nicht
+   per Umschalter in der Kopfzeile explizit auf hell gestellt), andererseits
+   fest per Umschalter erzwingbar - siehe theme-umschalter.tsx. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: #14181a;
+    --foreground: #f5f6f5;
+    --card: #31373a;
+    --border: #41484a;
+    --rand-bedienung: #6b7570;
+    --rand-ruhig: #4d5651;
+    --muted: #a6abb0;
+    --accent: #e8a32c;
+    --accent-foreground: #14181a;
+    --umfeld: #0b0d0e;
+    --ok: #4ade80;
+    --ok-flaeche: #052e16;
+    --ok-rand: #14532d;
+    --warnung: #fcd34d;
+    --warnung-flaeche: #451a03;
+    --warnung-rand: #92400e;
+    --gefahr: #f87171;
+    --gefahr-flaeche: #450a0a;
+    --gefahr-rand: #7f1d1d;
+    --ok-voll: #4ade80;
+    --ok-voll-text: #052e16;
+    --warnung-voll: #fcd34d;
+    --warnung-voll-text: #17191b;
+    --warnung-voll-rand: #fcd34d;
+    --gefahr-voll: #f87171;
+    --gefahr-voll-text: #17191b;
+    --zone-ok: #14532d;
+    --zone-warnung: #713f12;
+    --zone-gefahr: #7f1d1d;
+    --marke-ok: #4ade80;
+    --marke-warnung: #facc15;
+    --marke-gefahr: #f87171;
+    --marke-ring-ok: #14181a;
+    --marke-ring-warnung: #14181a;
+    --marke-ring-gefahr: #14181a;
+    --flaeche: #393f42;
+    --honig: #e8a32c;
+    --honig-flaeche: #3a2c12;
+    --honig-text: #f5c46a;
+    --kopf: #31373a;
+    --kopf-text: #f5f6f5;
+    --kopf-leise: #8b9298;
+    --schatten-faktor: 0;
+  }
+}
+
+:root[data-theme="dark"] {
+  --background: #14181a;
+  --foreground: #f5f6f5;
+  --card: #31373a;
+  --border: #41484a;
+  --rand-bedienung: #6b7570;
+  --rand-ruhig: #4d5651;
+  --muted: #a6abb0;
+  --accent: #e8a32c;
+  --accent-foreground: #14181a;
+  --umfeld: #0b0d0e;
+  --ok: #4ade80;
+  --ok-flaeche: #052e16;
+  --ok-rand: #14532d;
+  --warnung: #fcd34d;
+  --warnung-flaeche: #451a03;
+  --warnung-rand: #92400e;
+  --gefahr: #f87171;
+  --gefahr-flaeche: #450a0a;
+  --gefahr-rand: #7f1d1d;
+  --ok-voll: #4ade80;
+  --ok-voll-text: #052e16;
+  --warnung-voll: #fcd34d;
+  --warnung-voll-text: #17191b;
+  --warnung-voll-rand: #fcd34d;
+  --gefahr-voll: #f87171;
+  --gefahr-voll-text: #17191b;
+  --zone-ok: #14532d;
+  --zone-warnung: #713f12;
+  --zone-gefahr: #7f1d1d;
+  --marke-ok: #4ade80;
+  --marke-warnung: #facc15;
+  --marke-gefahr: #f87171;
+  --marke-ring-ok: #14181a;
+  --marke-ring-warnung: #14181a;
+  --marke-ring-gefahr: #14181a;
+  --flaeche: #393f42;
+  --honig: #e8a32c;
+  --honig-flaeche: #3a2c12;
+  --honig-text: #f5c46a;
+  --kopf: #31373a;
+  --kopf-text: #f5f6f5;
+  --kopf-leise: #8b9298;
+  --schatten-faktor: 0;
+}
+
+/* =====================================================================
+   Neue Gesamt-Designs (Entwürfe vom 20.10.2026, nur für Frank wählbar,
+   siehe lib/design.ts). Gleiche Farbnamen wie oben, dazu --flaeche (zweite
+   Fläche), --honig* (Schmuckfarbe), --kopf* (Kopfband) und --schatten-*.
+   Stehen bewusst nach den Grundwerten: bei gleicher Gewichtung gewinnt die
+   spätere Regel.
+   ===================================================================== */
+:root[data-design="wabe"] {
+    --background: #f3f2ec;
+    --foreground: #1d1b16;
+    --card: #fffefb;
+    --flaeche: #ebe8df;
+    --border: #e2ded3;
+    --rand-bedienung: #857e70;
+    --rand-ruhig: #cfc9bb;
+    --muted: #615b50;
+    --accent: #1e4d3b;
+    --accent-foreground: #ffffff;
+    --umfeld: #e4e1d7;
+    --honig: #d4900f;
+    --honig-flaeche: #fbefd3;
+    --honig-text: #7f5200;
+    --ok: #1d6b3a;
+    --ok-flaeche: #e3f2e6;
+    --ok-voll: #2a7a47;
+    --ok-voll-text: #ffffff;
+    --warnung: #8a4a00;
+    --warnung-flaeche: #fdf0d4;
+    --warnung-voll: #f6c453;
+    --warnung-voll-text: #4a2c00;
+    --gefahr: #b42318;
+    --gefahr-flaeche: #fde7e4;
+    --gefahr-voll: #c53a2b;
+    --gefahr-voll-text: #ffffff;
+    --schatten-farbe: 60 48 20;
+    --ok-rand: #9fd3ae;
+    --warnung-rand: #efc56b;
+    --gefahr-rand: #f0a69c;
+    --warnung-voll-rand: #c98a0b;
+    --zone-ok: #c4ebcf;
+    --zone-warnung: #fbe3a3;
+    --zone-gefahr: #f8cdc7;
+    --marke-ok: #2a9d55;
+    --marke-warnung: #f2b632;
+    --marke-gefahr: #e0503f;
+    --marke-ring-ok: #1d6b3a;
+    --marke-ring-warnung: #9a6200;
+    --marke-ring-gefahr: #a3261a;
+    --kopf: #1e4d3b;
+    --kopf-text: #ffffff;
+    --kopf-leise: #b9d2c6;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-design="wabe"]:not([data-theme="light"]) {
+    --background: #15130f;
+    --foreground: #f2eee6;
+    --card: #33302c;
+    --flaeche: #3c3932;
+    --border: #49453e;
+    --rand-bedienung: #7d7566;
+    --rand-ruhig: #4a4337;
+    --muted: #aba496;
+    --accent: #f0b44a;
+    --accent-foreground: #1b1610;
+    --umfeld: #0d0c09;
+    --honig: #f0b44a;
+    --honig-flaeche: #3b2d12;
+    --honig-text: #f5c46a;
+    --ok: #6fd38e;
+    --ok-flaeche: #16301f;
+    --ok-voll: #5cc27e;
+    --ok-voll-text: #0e1f14;
+    --warnung: #f6c453;
+    --warnung-flaeche: #3a2c0e;
+    --warnung-voll: #f6c453;
+    --warnung-voll-text: #2b1d00;
+    --gefahr: #ff8a7a;
+    --gefahr-flaeche: #3d1814;
+    --gefahr-voll: #f07563;
+    --gefahr-voll-text: #2a0b07;
+    --schatten-farbe: 0 0 0;
+    --schatten-faktor: 0;
+    /* Karten haben in Wabe keinen sichtbaren Rand, die Kante ersetzt ihn. */
+    --schatten-kante: 0 0 0 1px #49453e;
+    --ok-rand: #2c5a3a;
+    --warnung-rand: #7a5a14;
+    --gefahr-rand: #7a2c22;
+    --warnung-voll-rand: #f6c453;
+    --zone-ok: #244a31;
+    --zone-warnung: #5c4512;
+    --zone-gefahr: #5e231c;
+    --marke-ok: #6fd38e;
+    --marke-warnung: #f6c453;
+    --marke-gefahr: #ff8a7a;
+    --marke-ring-ok: #15130f;
+    --marke-ring-warnung: #15130f;
+    --marke-ring-gefahr: #15130f;
+    --kopf: #33302c;
+    --kopf-text: #f2eee6;
+    --kopf-leise: #a59d8e;
+  }
+}
+:root[data-design="wabe"][data-theme="dark"] {
+    --background: #15130f;
+    --foreground: #f2eee6;
+    --card: #33302c;
+    --flaeche: #3c3932;
+    --border: #49453e;
+    --rand-bedienung: #7d7566;
+    --rand-ruhig: #4a4337;
+    --muted: #aba496;
+    --accent: #f0b44a;
+    --accent-foreground: #1b1610;
+    --umfeld: #0d0c09;
+    --honig: #f0b44a;
+    --honig-flaeche: #3b2d12;
+    --honig-text: #f5c46a;
+    --ok: #6fd38e;
+    --ok-flaeche: #16301f;
+    --ok-voll: #5cc27e;
+    --ok-voll-text: #0e1f14;
+    --warnung: #f6c453;
+    --warnung-flaeche: #3a2c0e;
+    --warnung-voll: #f6c453;
+    --warnung-voll-text: #2b1d00;
+    --gefahr: #ff8a7a;
+    --gefahr-flaeche: #3d1814;
+    --gefahr-voll: #f07563;
+    --gefahr-voll-text: #2a0b07;
+    --schatten-farbe: 0 0 0;
+    --schatten-faktor: 0;
+    /* Karten haben in Wabe keinen sichtbaren Rand, die Kante ersetzt ihn. */
+    --schatten-kante: 0 0 0 1px #49453e;
+    --ok-rand: #2c5a3a;
+    --warnung-rand: #7a5a14;
+    --gefahr-rand: #7a2c22;
+    --warnung-voll-rand: #f6c453;
+    --zone-ok: #244a31;
+    --zone-warnung: #5c4512;
+    --zone-gefahr: #5e231c;
+    --marke-ok: #6fd38e;
+    --marke-warnung: #f6c453;
+    --marke-gefahr: #ff8a7a;
+    --marke-ring-ok: #15130f;
+    --marke-ring-warnung: #15130f;
+    --marke-ring-gefahr: #15130f;
+    --kopf: #33302c;
+    --kopf-text: #f2eee6;
+    --kopf-leise: #a59d8e;
+}
+:root[data-design="klar"] {
+    --background: #ffffff;
+    --foreground: #0f1b21;
+    --card: #ffffff;
+    --flaeche: #f2f5f6;
+    --border: #dfe4e7;
+    --rand-bedienung: #7c8a92;
+    --rand-ruhig: #c3ccd1;
+    --muted: #55636b;
+    --accent: #0b6b74;
+    --accent-foreground: #ffffff;
+    --umfeld: #e9eef0;
+    --honig: #d99a16;
+    --honig-flaeche: #fdf3dc;
+    --honig-text: #7a5000;
+    --kopf: #0f2a30;
+    --kopf-text: #e6f1f2;
+    --kopf-leise: #9fb8bc;
+    --ok: #17663a;
+    --ok-flaeche: #e4f4ea;
+    --ok-voll: #22a05a;
+    --ok-voll-text: #ffffff;
+    --warnung: #8a4600;
+    --warnung-flaeche: #fff1d6;
+    --warnung-voll: #f2b632;
+    --warnung-voll-text: #3d2400;
+    --gefahr: #b3261e;
+    --gefahr-flaeche: #fdeceb;
+    --gefahr-voll: #d4382c;
+    --gefahr-voll-text: #ffffff;
+    --schatten-farbe: 15 35 45;
+    --ok-rand: #9bd6b1;
+    --warnung-rand: #efc35f;
+    --gefahr-rand: #f0a39c;
+    --warnung-voll-rand: #c98a0b;
+    --zone-ok: #c7ecd5;
+    --zone-warnung: #fbe2a1;
+    --zone-gefahr: #f7cbc6;
+    --marke-ok: #22a05a;
+    --marke-warnung: #f2b632;
+    --marke-gefahr: #d4382c;
+    --marke-ring-ok: #17663a;
+    --marke-ring-warnung: #8a5a00;
+    --marke-ring-gefahr: #9e1f17;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-design="klar"]:not([data-theme="light"]) {
+    --background: #0c1215;
+    --foreground: #e7eef0;
+    --card: #272f32;
+    --flaeche: #2c353a;
+    --border: #3a474e;
+    --rand-bedienung: #6c7f88;
+    --rand-ruhig: #33454e;
+    --muted: #93a4ab;
+    --accent: #5ec8cf;
+    --accent-foreground: #04252a;
+    --umfeld: #080c0e;
+    --honig: #f2b632;
+    --honig-flaeche: #33260b;
+    --honig-text: #f5c45c;
+    --kopf: #081013;
+    --kopf-text: #e7eef0;
+    --kopf-leise: #8aa0a7;
+    --ok: #5fd394;
+    --ok-flaeche: #0f2a1c;
+    --ok-voll: #4cc283;
+    --ok-voll-text: #06200f;
+    --warnung: #f5c45c;
+    --warnung-flaeche: #33260b;
+    --warnung-voll: #f2b632;
+    --warnung-voll-text: #2a1900;
+    --gefahr: #ff8b80;
+    --gefahr-flaeche: #3a1512;
+    --gefahr-voll: #ef6a5e;
+    --gefahr-voll-text: #240604;
+    --schatten-farbe: 0 0 0;
+    --schatten-faktor: 0;
+    --ok-rand: #1d4a31;
+    --warnung-rand: #6e5212;
+    --gefahr-rand: #6e2620;
+    --warnung-voll-rand: #f2b632;
+    --zone-ok: #1b4430;
+    --zone-warnung: #5a4310;
+    --zone-gefahr: #5a201b;
+    --marke-ok: #5fd394;
+    --marke-warnung: #f2b632;
+    --marke-gefahr: #ff8b80;
+    --marke-ring-ok: #0c1215;
+    --marke-ring-warnung: #0c1215;
+    --marke-ring-gefahr: #0c1215;
+  }
+}
+:root[data-design="klar"][data-theme="dark"] {
+    --background: #0c1215;
+    --foreground: #e7eef0;
+    --card: #272f32;
+    --flaeche: #2c353a;
+    --border: #3a474e;
+    --rand-bedienung: #6c7f88;
+    --rand-ruhig: #33454e;
+    --muted: #93a4ab;
+    --accent: #5ec8cf;
+    --accent-foreground: #04252a;
+    --umfeld: #080c0e;
+    --honig: #f2b632;
+    --honig-flaeche: #33260b;
+    --honig-text: #f5c45c;
+    --kopf: #081013;
+    --kopf-text: #e7eef0;
+    --kopf-leise: #8aa0a7;
+    --ok: #5fd394;
+    --ok-flaeche: #0f2a1c;
+    --ok-voll: #4cc283;
+    --ok-voll-text: #06200f;
+    --warnung: #f5c45c;
+    --warnung-flaeche: #33260b;
+    --warnung-voll: #f2b632;
+    --warnung-voll-text: #2a1900;
+    --gefahr: #ff8b80;
+    --gefahr-flaeche: #3a1512;
+    --gefahr-voll: #ef6a5e;
+    --gefahr-voll-text: #240604;
+    --schatten-farbe: 0 0 0;
+    --schatten-faktor: 0;
+    --ok-rand: #1d4a31;
+    --warnung-rand: #6e5212;
+    --gefahr-rand: #6e2620;
+    --warnung-voll-rand: #f2b632;
+    --zone-ok: #1b4430;
+    --zone-warnung: #5a4310;
+    --zone-gefahr: #5a201b;
+    --marke-ok: #5fd394;
+    --marke-warnung: #f2b632;
+    --marke-gefahr: #ff8b80;
+    --marke-ring-ok: #0c1215;
+    --marke-ring-warnung: #0c1215;
+    --marke-ring-gefahr: #0c1215;
+}
+
+/* A "Wabe": warme Flächen, weiche Karten mit Schatten statt Rand, runde
+   Ecken, Überschriften in Bricolage Grotesque, Text in Figtree. */
+[data-design="wabe"] body {
+  font-family: var(--font-figtree), ui-sans-serif, system-ui, sans-serif;
+}
+[data-design="wabe"] :is(h1, h2, h3),
+[data-design="wabe"] .wabe-titel {
+  font-family: var(--font-bricolage), var(--font-figtree), ui-sans-serif, sans-serif;
+  letter-spacing: -0.015em;
+}
+[data-design="wabe"] main h1 {
+  font-weight: 700;
+}
+[data-design="wabe"] main .rounded-xl,
+[data-design="wabe"] dialog.rounded-xl {
+  border-radius: 18px;
+}
+[data-design="wabe"] main .rounded-lg {
+  border-radius: 14px;
+}
+[data-design="wabe"] main .rounded-md {
+  border-radius: 12px;
+}
+[data-design="wabe"] main .bg-card.border-border {
+  border-color: transparent;
+}
+
+/* B "Klar": kühle, flache Flächen, klare 1-px-Linien mit feinem Schatten, kleine
+   Ecken, Text in Archivo, Zahlen und Daten in IBM Plex Mono. */
+[data-design="klar"] body {
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+[data-design="klar"] main h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+[data-design="klar"] .klar-mono {
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+}
+[data-design="klar"] main .rounded-xl,
+[data-design="klar"] dialog.rounded-xl {
+  border-radius: 10px;
+}
+[data-design="klar"] main .rounded-lg {
+  border-radius: 8px;
+}
+[data-design="klar"] main .rounded-md {
+  border-radius: 6px;
+}
+
+/* Kacheln und Felder heben sich mit Schatten vom Untergrund ab (Franks
+   Wunsch vom 21.10.2026), in allen Designs. Kacheln mit shadow-md bekommen
+   ihn über Tailwind (siehe @theme), diese Regeln fangen Kacheln ohne eigene
+   Schatten-Klasse (aufklappbare Abschnitte, Listen) und alle umrandeten
+   Eingabefelder. Über --tw-shadow statt box-shadow direkt, damit der
+   Fokusring (ring-1) erhalten bleibt. */
+.bg-card:is(.border-border, .border-rand-ruhig):is(.rounded-lg, .rounded-xl, .rounded-2xl):not([class*="shadow"]) {
+  --tw-shadow: var(--schatten-kachel);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+:is(input, select, textarea).border:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]) {
+  --tw-shadow: var(--schatten-feld);
+  box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-inset-ring-shadow, 0 0 #0000),
+    var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  /* Lange Wörter ohne Leerzeichen (Nummern, "1111...") umbrechen statt über
+     den Rand zu laufen. "anywhere" zählt auch beim Bemessen von Spalten und
+     Flex-Kästen, sonst würde der Kasten so breit wie das lange Wort. */
+  overflow-wrap: anywhere;
+}
+
+/* Knöpfe, Beschriftungen und Tabellen behalten ihre Breite wie bisher
+   (sonst würde z.B. "Kacheln" im Umschalter zu "Kachel/n" gequetscht);
+   dort bricht ein zu langes Wort nur, wenn es gar nicht anders geht. */
+button,
+label,
+select,
+nav,
+table {
+  overflow-wrap: break-word;
+}
+
+/* Breite Monitore (ab 96rem = Menü + Inhalt, siehe layout.tsx): Die App
+   steht als abgesetzte Fläche mittig, die leeren Ränder links und rechts
+   sind eine Spur dunkler. Nur angemeldet - die Anmeldeseite hat keinen
+   App-Rahmen. */
+@media (min-width: 96rem) {
+  body:has(> .app-rahmen) {
+    background: var(--umfeld);
+  }
+}
+
+/* iOS Safari zoomt beim Antippen automatisch in die ganze Seite hinein,
+   sobald ein Eingabefeld eine Schriftgröße unter 16px hat (soll verhindern,
+   dass man zu kleine Schrift nicht lesen kann) - danach bleibt die Seite
+   bis zum manuellen Herauszoomen vergrößert. Die Formularfelder nutzen
+   überall text-sm (14px), einzelne Stellen sogar text-xs. Erzwingt deshalb
+   auf schmalen Bildschirmen 16px auf allen Eingabeelementen, unabhängig
+   davon, welche Tailwind-Klasse sonst gesetzt ist. */
+@media (max-width: 767px) {
+  input:not(.zk-feld),
+  select,
+  textarea:not(.zk-feld) {
+    font-size: 16px !important;
+  }
+}
+
+/* Felder direkt auf der Zuchtkarte (zuchtkarte-karte.tsx): sehen aus wie der
+   gedruckte Text, nur mit gepunkteter Linie darunter. Von der 16px-Regel oben
+   ausgenommen - die Karte rechnet in einer festen, großen Größe (alle Felder
+   über 16px) und wird danach nur noch verkleinert dargestellt. */
+.zk-feld {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  background-image: linear-gradient(to right, color-mix(in srgb, currentColor 45%, transparent) 40%, transparent 0);
+  background-size: 4px 1px;
+  background-position: left bottom;
+  background-repeat: repeat-x;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  resize: none;
+  overflow: hidden;
+  outline: none;
+}
+.zk-feld:focus {
+  background-color: color-mix(in srgb, #ffd54a 32%, transparent);
+}
+.zk-feld::placeholder {
+  color: color-mix(in srgb, currentColor 40%, transparent);
+  opacity: 1;
+}
+
+/* Größerer Anfasser für die Beurteilungs-Schieberegler (Volksstärke,
+   Sanftmut, usw.) - der native Regler war auf dem Smartphone zu klein zum
+   präzisen Treffen. Farbe per CSS-Variable steuerbar (rot/gelb/grün je
+   nach Einstufung), fällt ohne gesetzten Wert auf den normalen Akzent
+   zurück. */
+.bewertung-schieber {
+  height: 2rem;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+/* Der Balken selbst ist durchsichtig - darunter liegen die farbigen Bänder
+   und Striche (siehe bewertungs-schieber.tsx). Der Anfasser färbt sich
+   passend zur Einstufung und strahlt einen weichen Schein aus.
+   box-sizing: border-box ist nötig: Tailwind setzt es nicht auf den Anfasser,
+   er wäre sonst 30 + 2 x 3 = 36 px groß, liefe 18 statt 15 px innerhalb der
+   Kanten und säße 3 px zu tief - der Ring für die letzte Wertung (rechnet mit
+   30 px) läge dann nicht konzentrisch. */
+.bewertung-schieber::-webkit-slider-runnable-track {
+  height: 6px;
+  background: transparent;
+}
+.bewertung-schieber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  margin-top: -12px;
+  border-radius: 9999px;
+  background: var(--schieber-akzent, var(--accent));
+  border: 3px solid var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 18px 5px color-mix(in srgb, var(--schieber-akzent, transparent) var(--schieber-glow-staerke, 70%), transparent);
+}
+.bewertung-schieber::-moz-range-track {
+  height: 6px;
+  background: transparent;
+}
+.bewertung-schieber::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  background: var(--schieber-akzent, var(--accent));
+  border: 3px solid var(--card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 18px 5px color-mix(in srgb, var(--schieber-akzent, transparent) var(--schieber-glow-staerke, 70%), transparent);
+}
+/* Noch nicht bewertet: kein Anfasser, damit nichts nach einem gesetzten
+   Wert aussieht. Der erste Tipp setzt ihn dorthin, wo getippt wurde. */
+.bewertung-schieber[data-inaktiv]::-webkit-slider-thumb {
+  opacity: 0;
+}
+.bewertung-schieber[data-inaktiv]::-moz-range-thumb {
+  opacity: 0;
+}
+
+/* Popups (natives <dialog>) immer mittig im Fenster: Tailwinds
+   Grundeinstellungen setzen bei allen Elementen margin: 0 und damit auch das
+   Zentrieren des Browsers außer Kraft - ein Popup ohne eigenes "m-auto" klebte
+   dann oben links. Hier zentral wieder herstellen. Hohe Popups bleiben auf
+   kleinen Handys im Fenster und lassen sich in sich scrollen. Eigene Klassen
+   am Popup (z.B. das Filter-Blatt von unten bei den Königinnen) gehen vor. */
+@layer base {
+  /* Kräftiger Fokusrahmen für alles, was per Tastatur angesteuert wird. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  /* Safari am iPad/iPhone gibt Datums- und Zeitfeldern eine eigene
+     Mindestbreite. In zwei Spalten ragt "Beginn" sonst ins Nachbarfeld.
+     Nur dort (-webkit-touch-callout gibt es nur unter iOS) ohne eigene
+     Darstellung; damit ein leeres Feld nicht zusammenfällt, die
+     Mindesthöhe der übrigen Felder. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    min-width: 0;
+  }
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 2.375rem;
+    }
+    input::-webkit-date-and-time-value {
+      text-align: left;
+    }
+  }
+  dialog:modal {
+    margin: auto;
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+/* Stand-Pins auf den Karten (siehe lib/leaflet-icons.ts): leichter Schatten
+   wie bei Leaflets Standard-Marker, damit sie sich vom Kartengrund abheben. */
+.stand-pin svg {
+  filter: drop-shadow(1px 2px 1.5px rgb(0 0 0 / 0.35));
+}
+
+/* Nestsuche-Karte nach dem Handy gedreht (nestsuche-arbeitsplatz.tsx): Das
+   ganze Kartenfeld dreht sich per CSS. Zeichen auf der Karte und Tooltips
+   drehen sich um --gegendrehung zurück und bleiben so aufrecht lesbar. Ohne
+   Drehung ist --gegendrehung 0 und die Tooltips sehen aus wie immer. */
+.karte-aufrecht {
+  transform: rotate(var(--gegendrehung, 0deg));
+}
+.karte-gedreht .leaflet-tooltip {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.karte-gedreht .leaflet-tooltip::before {
+  display: none;
+}
+.karte-gedreht .karte-tooltip-text {
+  display: block;
+  transform: rotate(var(--gegendrehung, 0deg));
+  padding: 6px;
+  border: 1px solid #fff;
+  border-radius: 3px;
+  background: #fff;
+  color: #222;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+/* Fortschrittsbalken beim Seitenwechsel (app/loading.tsx): ein Stück
+   Akzentfarbe läuft von links nach rechts durch. Wer Bewegung reduziert hat,
+   sieht einen ruhenden Balken. */
+@keyframes ladebalken {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.ladebalken {
+  animation: ladebalken 1.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ladebalken {
+    animation: none;
+    width: 100%;
+  }
+}
+
+/* Neue Designs: Feinheiten.
+   A: Fotoplatzhalter der Standkarten als Wabenmuster in Honigfarbe. */
+[data-design="wabe"] .wabe-muster {
+  border: 0;
+  border-radius: 14px;
+  background-color: var(--honig-flaeche);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48.5' viewBox='0 0 28 48.5'%3E%3Cpath d='M14 0l14 8.08v16.17L14 32.33 0 24.25V8.08z M14 32.33l14 8.08v16.17M14 32.33L0 40.41' fill='none' stroke='%23d4900f' stroke-opacity='.3' stroke-width='1.2'/%3E%3C/svg%3E");
+  background-size: 28px 48.5px;
+}
+/* B: Seiten- und Kartenhintergrund sind beide weiß - innere Kästen, die sonst
+   die Seitenfarbe tragen, bekommen die zweite Fläche, damit sie sichtbar
+   bleiben. */
+[data-design="klar"] main .bg-background {
+  background-color: var(--flaeche);
+}
+
+/* Knopf "Mein Standort" bei den Zoom-Knöpfen (lib/mein-standort.ts). Grau
+   aus, blau an, pulsiert während der Suche. Leaflet-Knöpfe sind in allen
+   Designs weiß, deshalb feste Farben statt Variablen. */
+.mein-standort {
+  position: relative;
+}
+.leaflet-bar.mein-standort a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+}
+.leaflet-bar.mein-standort a.mein-standort-an {
+  color: #1a73e8;
+}
+.leaflet-bar.mein-standort a.mein-standort-sucht {
+  color: #1a73e8;
+  animation: mein-standort-puls 1s ease-in-out infinite;
+}
+@keyframes mein-standort-puls {
+  50% {
+    opacity: 0.35;
+  }
+}
+.mein-standort-meldung {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: max-content;
+  max-width: 14rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 12px;
+  line-height: 1.3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.leaflet-right .mein-standort-meldung {
+  right: calc(100% + 6px);
+}
+.leaflet-left .mein-standort-meldung {
+  left: calc(100% + 6px);
+}
+.mein-standort-meldung[hidden] {
+  display: none;
+}
+
+/* Helfer mit "Nur lesen" (lib/nutzer.ts, Attribut aus app/layout.tsx):
+   alles zum Anlegen, Bearbeiten und Löschen ausblenden. Das ist nur die
+   Oberfläche - gesperrt wird im Datenbankzugriff (lib/prisma.ts).
+   - Formulare in <main> verschwinden ganz, außer mit method="get" (Suchen,
+     Filter) oder data-lesen-erlaubt. Menü und Kopf liegen außerhalb.
+   - Links auf .../neu, .../bearbeiten, .../loeschen ebenso.
+   - Knöpfe, die ohne Formular etwas ändern oder ein Formular öffnen, tragen
+     data-schreibt (ausgeblendet) oder data-schreibt-gesperrt (sichtbar, aber
+     nicht bedienbar, etwa Haken, die zugleich den Stand zeigen).
+   Alle Helfer (data-helfer): keine Links in die Einstellungen, die dem Admin
+   vorbehalten sind. */
+[data-nur-lesen] main form:not([method="get" i]):not([data-lesen-erlaubt]):not([data-lesen-erlaubt] *),
+[data-nur-lesen] main a[href$="/neu"],
+[data-nur-lesen] main a[href*="/neu?"],
+[data-nur-lesen] main a[href*="/bearbeiten"],
+[data-nur-lesen] main a[href*="/loeschen"],
+[data-nur-lesen] [data-schreibt],
+[data-helfer] main a[href^="/einstellungen/"]:not([href^="/einstellungen/design"]):not([href^="/einstellungen/passwort"]) {
+  display: none !important;
+}
+[data-nur-lesen] [data-schreibt-gesperrt] {
+  pointer-events: none;
+  opacity: 0.5;
+}

@@ -1,0 +1,73 @@
+# Imkereiverwaltung zum Selbsthosten: App, Datenbank und Caddy (sorgt für
+# HTTPS mit kostenlosem Zertifikat von Let's Encrypt). Die Werte in ${...}
+# stehen in der Datei .env daneben, das Installationsskript legt sie an.
+#
+# Starten:   docker compose up -d
+# Stoppen:   docker compose down        (Daten bleiben erhalten)
+# Protokoll: docker compose logs -f app
+
+name: imkereiverwaltung
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: imkerei
+      POSTGRES_PASSWORD: ${DB_PASSWORT:?DB_PASSWORT fehlt in .env}
+      POSTGRES_DB: imkerei
+    volumes:
+      - datenbank:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U imkerei -d imkerei"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    # "1" folgt allen Versionen 1.x, springt aber nie von selbst auf 2.0.
+    image: ${IMKEREI_IMAGE:-ghcr.io/frawoer79/imkerei_verwaltung}:${IMKEREI_VERSION:-1}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://imkerei:${DB_PASSWORT}@db:5432/imkerei?schema=public
+      ANMELDUNG_GEHEIMNIS: ${ANMELDUNG_GEHEIMNIS:?ANMELDUNG_GEHEIMNIS fehlt in .env}
+      EINRICHTUNG_CODE: ${EINRICHTUNG_CODE:-}
+      UPLOAD_DIR: /app/uploads
+      UPDATE_STEUERUNG: /app/steuerung
+    volumes:
+      - dateien:/app/uploads
+      # Über diesen Ordner bittet die App um ein Update (Knopf unter
+      # Einstellungen -> System). Ausgeführt wird es vom Dienst
+      # imkerei-update auf dem Server, nicht von der App selbst.
+      - ./steuerung:/app/steuerung
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/gesund').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN fehlt in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-daten:/data
+      - caddy-config:/config
+
+volumes:
+  datenbank:
+  dateien:
+  caddy-daten:
+  caddy-config:
