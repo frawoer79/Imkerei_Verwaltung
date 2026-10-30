@@ -5,7 +5,7 @@ Königinnen und Zucht, Behandlungen mit Nachweis, Maßnahmen und Kalender,
 Lager für Material und Honig. Läuft im Browser am Rechner und am Handy, auch
 mit kurzen Funklöchern am Stand.
 
-Kostenlos für alle Imker, auch wenn du Honig verkaufst. Lizenz kurz erklärt
+Kostenlos für alle Imker. Lizenz kurz erklärt
 in [LIZENZ.md](LIZENZ.md), rechtlich gilt [LICENSE](LICENSE).
 
 ## Anleitung
