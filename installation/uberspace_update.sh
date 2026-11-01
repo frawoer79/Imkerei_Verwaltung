@@ -29,7 +29,7 @@ fi
 trap 'rm -f "$0"' EXIT
 
 export PATH="$HOME/bin:$PATH"
-BASIS="$HOME/imkerei"
+BASIS="$HOME/imkerei_verwaltung_app"
 QUELLE="$BASIS/quelle"
 REPO="${IMKEREI_REPO:-$HOME/imkerei_verwaltung}"
 ZWEIG="${IMKEREI_ZWEIG:-master}"
@@ -108,11 +108,26 @@ echo "Update: $VORHER -> $NACHHER"
 # --- Bauen und neu starten --------------------------------------------------
 
 hinweis "Stoppe die App und baue neu ..."
-supervisorctl stop imkerei || true
+supervisorctl stop imkerei_verwaltung_app || true
 cd "$QUELLE/web"
 npm ci
 npx prisma generate
-npm run build
+
+# Zwei Wege zur fertigen App:
+#  a) Liegt ~/imkerei_verwaltung_app/next.tar.gz da (auf dem eigenen Rechner gebaut und
+#     hochgeladen, mit dem Ordner .next darin), wird dieser Stand verwendet.
+#  b) Sonst wird hier gebaut. Das braucht viel Arbeitsspeicher, und weil der
+#     Server eine zu alte glibc für die native Next.js-Compiler-Datei (SWC)
+#     hat, geht es nur mit Webpack und der langsameren WASM-Fassung.
+if [ -f "$BASIS/next.tar.gz" ]; then
+  hinweis "Verwende den auf dem eigenen Rechner gebauten Stand (next.tar.gz) ..."
+  rm -rf .next
+  tar -xzf "$BASIS/next.tar.gz" -C "$QUELLE/web"
+  [ -d "$QUELLE/web/.next" ] || abbruch "In next.tar.gz fehlt der Ordner .next."
+  mv -f "$BASIS/next.tar.gz" "$BASIS/next.tar.gz.verwendet"
+else
+  npx next build --webpack
+fi
 
 hinweis "Starte die App ..."
 supervisorctl start imkerei

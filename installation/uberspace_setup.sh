@@ -5,8 +5,8 @@
 #
 # Voraussetzungen:
 #   - Ein Bare-Repository auf dem Uberspace, in das du das komplette Projekt
-#     gepusht hast, standardmäßig ~/repos/Imkerei_Verwaltung.git
-#     (anderer Ort: IMKEREI_REPO=/pfad/zum/repo.git setzen).
+#     gepusht hast, standardmäßig ~/repos/Imkerei_Verwaltung
+#     (anderer Ort: IMKEREI_REPO=/pfad/zum/repo setzen).
 #   - PostgreSQL läuft auf dem Uberspace (https://lab.uberspace.de/guide_postgresql/),
 #     mit leerer Datenbank und einem Benutzer, dem sie gehört.
 #
@@ -91,7 +91,7 @@ fi
 # --- Einstellungen (.env) ---------------------------------------------------
 
 if [ ! -f "$BASIS/.env" ]; then
-  hinweis "Lege ~/imkerei_verwaltung/.env an ..."
+  hinweis "Lege ~/imkerei_verwaltung_app/.env an ..."
   echo "Angaben zur PostgreSQL-Datenbank (Passwort bitte nur Buchstaben und Ziffern):"
   read -r -p "  Port [your_port]: " DB_PORT
   DB_PORT="${DB_PORT:-5432}"
@@ -144,7 +144,22 @@ hinweis "Baue die App. Das dauert beim ersten Mal einige Minuten ..."
 cd "$QUELLE/web"
 npm ci
 npx prisma generate
-npm run build
+
+# Zwei Wege zur fertigen App:
+#  a) Liegt ~/imkerei_verwaltung_app/next.tar.gz da (auf dem eigenen Rechner gebaut und
+#     hochgeladen, mit dem Ordner .next darin), wird dieser Stand verwendet.
+#  b) Sonst wird hier gebaut. Das braucht viel Arbeitsspeicher, und weil der
+#     Server eine zu alte glibc für die native Next.js-Compiler-Datei (SWC)
+#     hat, geht es nur mit Webpack und der langsameren WASM-Fassung.
+if [ -f "$BASIS/next.tar.gz" ]; then
+  hinweis "Verwende den auf dem eigenen Rechner gebauten Stand (next.tar.gz) ..."
+  rm -rf .next
+  tar -xzf "$BASIS/next.tar.gz" -C "$QUELLE/web"
+  [ -d "$QUELLE/web/.next" ] || abbruch "In next.tar.gz fehlt der Ordner .next."
+  mv -f "$BASIS/next.tar.gz" "$BASIS/next.tar.gz.verwendet"
+else
+  npx next build --webpack
+fi
 
 # --- Start-Skript und Dienst ------------------------------------------------
 
