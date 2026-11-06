@@ -31,6 +31,8 @@ type StandVolk = {
   letzteDurchsicht?: LetzteWabenzahlen | null;
   /// Wertungen der letzten Durchsichten - als Ring am Bewertungs-Strahl.
   letzteBewertungen?: LetzteBewertungen | null;
+  /// Waben in der Beute (null = noch nicht erfasst), siehe lib/wabenbestand.ts.
+  wabenBestand?: number | null;
 };
 
 // Symbol über dem Wort wie bei den Knöpfen der Volkskachel - so passt
@@ -359,6 +361,10 @@ export function StandSammelAktionen({
           // Vorgabe aus der letzten Durchsicht nur, wenn es um genau ein Volk
           // geht - bei mehreren Völkern passt keine einzelne Zahl.
           const letzteDurchsicht = gewaehlt.length === 1 ? (gewaehlt[0].letzteDurchsicht ?? null) : null;
+          // Wabenbestand nur bei einem Volk - bei mehreren prüft erst der
+          // Server je Volk, ob genug Waben zum Entnehmen da sind.
+          const wabenBestand = gewaehlt.length === 1 ? gewaehlt[0].wabenBestand : undefined;
+          const wabenNachtragenHref = gewaehlt.length === 1 ? `/voelker/${gewaehlt[0].id}/bearbeiten` : undefined;
           const letzteBewertungen = gewaehlt.length === 1 ? (gewaehlt[0].letzteBewertungen ?? null) : null;
           if (einzelVolk && gewaehlt.length === 1 && gewaehlt[0].id === einzelVolk.id) {
             return (
@@ -396,6 +402,8 @@ export function StandSammelAktionen({
                       neu
                       letzteDurchsicht={letzteDurchsicht}
                       letzteBewertungen={letzteBewertungen}
+                      wabenBestand={wabenBestand}
+                      wabenNachtragenHref={wabenNachtragenHref}
                     />
 
                     <div>
@@ -472,6 +480,8 @@ export function StandSammelAktionen({
                     neu
                     letzteDurchsicht={letzteDurchsicht}
                     letzteBewertungen={letzteBewertungen}
+                    wabenBestand={wabenBestand}
+                    wabenNachtragenHref={wabenNachtragenHref}
                   />
 
                   <div>

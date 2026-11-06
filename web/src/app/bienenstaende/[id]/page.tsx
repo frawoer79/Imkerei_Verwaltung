@@ -64,6 +64,7 @@ const MASSNAHMEN_TEXT: Record<Faelligkeit, string> = {
 };
 import { StandSammelAktionen } from "@/components/stand-sammel-aktionen";
 import { letzteBewertungenLaden, letzteWabenzahlenLaden } from "@/lib/letzte-durchsicht";
+import { wabenbestaendeLaden } from "@/lib/wabenbestand";
 import { jetztAlsInputWert } from "@/lib/datum";
 import { sortiereVoelker } from "@/lib/voelker-sortierung";
 import { SeitenNavigation } from "@/components/seiten-navigation";
@@ -791,6 +792,7 @@ export default async function BienenstandDetailPage({
     voelkerMitBewertungen.filter((volk) => !volk.archiviert),
     bienenstand.voelkerSortierung
   );
+  const wabenBestaende = await wabenbestaendeLaden(aktiveVoelker.map((volk) => volk.id));
   const archivierteVoelker = sortiereVoelker(
     voelkerMitBewertungen.filter((volk) => volk.archiviert),
     bienenstand.voelkerSortierung
@@ -938,6 +940,7 @@ export default async function BienenstandDetailPage({
           koeniginFarbe: anzeigeFarbe(volk.koenigin?.jahrgang, volk.koenigin?.zeichenFarbe)?.hex ?? null,
           letzteDurchsicht: letzteWabenzahlen.get(volk.id) ?? null,
           letzteBewertungen: letzteBewertungen.get(volk.id) ?? null,
+          wabenBestand: wabenBestaende.get(volk.id) ?? null,
         }))}
         honigraeume={honigraeume}
         wabenmasse={wabenmasse}

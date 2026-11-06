@@ -44,6 +44,8 @@ import { BEUTENSYSTEM_KATALOG, EIGNUNGEN, fehlendeKatalogMasse } from "@/lib/beu
 import { zargenFuerNeueMasse } from "@/lib/beuten";
 import { KOENIGINS_BEURTEILUNGS_KRITERIEN, noteText, stufeText } from "@/components/stockkarten-eintrag-felder";
 import { nachweisDatenLaden } from "@/lib/nachweis";
+import { WABEN_AENDERUNGS_ARTEN, WABEN_AENDERUNG_MAX, aenderungSumme, startSumme, wabenPlatz, WABEN_START_ARTEN } from "@/lib/waben";
+import { wabenbestaendeLaden } from "@/lib/wabenbestand";
 import { nachweisPdfErzeugen } from "@/lib/nachweis-pdf";
 import { buchungsListeLaden, erzeugnisListeLaden, materialListeLaden } from "@/lib/lagerliste";
 import { buchungsListePdfErzeugen, erzeugnisListePdfErzeugen, materialListePdfErzeugen } from "@/lib/lagerliste-pdf";
@@ -512,6 +514,34 @@ function brutraumAusFormular(formData: FormData) {
   };
 }
 
+// Waben im Brutraum je Art (siehe Volk.wabenStandAm): gilt nur, wenn das
+// Formular "wabenErfassen" mitschickt - beim Anlegen immer, beim Bearbeiten
+// erst, wenn etwas eingetragen ist. Dann mindestens eine Wabe und höchstens
+// so viele, wie in den Brutraum passen. Der Erfassungszeitpunkt ist jetzt:
+// Durchsichten ab hier werden auf diesen Stand gerechnet.
+async function wabenStartAusFormular(
+  formData: FormData
+): Promise<{ fehler: string } | { daten: Partial<Record<(typeof WABEN_START_ARTEN)[number]["feld"], number> & { wabenStandAm: Date }> }> {
+  if (formData.get("wabenErfassen") !== "ja") return { daten: {} };
+  const werte = Object.fromEntries(
+    WABEN_START_ARTEN.map((art) => {
+      const zahl = zahlOderNull(formData.get(art.feld));
+      return [art.feld, zahl === null ? 0 : Math.max(0, Math.round(zahl))];
+    })
+  ) as Record<(typeof WABEN_START_ARTEN)[number]["feld"], number>;
+  const summe = startSumme(werte);
+  if (summe < 1) return { fehler: "Bitte die Waben im Brutraum eintragen, mindestens eine." };
+  const { brutraumZargeId, brutraumZargenAnzahl } = brutraumAusFormular(formData);
+  const zarge = brutraumZargeId
+    ? await prisma.zarge.findUnique({ where: { id: brutraumZargeId }, select: { wabenAnzahl: true } })
+    : null;
+  const platz = wabenPlatz(zarge, brutraumZargenAnzahl);
+  if (summe > platz) {
+    return { fehler: `${summe} Waben passen nicht in den Brutraum, dort ist Platz für ${platz}.` };
+  }
+  return { daten: { ...werte, wabenStandAm: new Date() } };
+}
+
 // Deckel: leer = Standarddeckel, sonst die ID eines Klimadeckels aus dem
 // Lager. Fehlt das Feld ganz (kein Klimadeckel angelegt, die Auswahl wird
 // dann nicht angezeigt), bleibt der bisherige Wert unangetastet.
@@ -579,6 +609,9 @@ export async function volkAnlegen(bienenstandId: string, formData: FormData): Pr
     bestandsKoenigin = koenigin;
   }
 
+  const waben = await wabenStartAusFormular(formData);
+  if ("fehler" in waben) return waben;
+
   const rasse = textOderUndefined(formData.get("rasse")) ?? bestandsKoenigin?.rasse ?? undefined;
 
   const volk = await prisma.volk.create({
@@ -588,6 +621,7 @@ export async function volkAnlegen(bienenstandId: string, formData: FormData): Pr
       rasse,
       notizen: textOderUndefined(formData.get("notizen")),
       ...brutraumAusFormular(formData),
+      ...waben.daten,
       ...klimadeckelAusFormular(formData),
       ...(await beuteFotoAusFormular(formData)),
     },
@@ -678,6 +712,9 @@ async function volkFelderAktualisieren(
     return { fehler: `An diesem Stand gibt es bereits ein Volk namens „${name}“.` };
   }
 
+  const waben = await wabenStartAusFormular(formData);
+  if ("fehler" in waben) return waben;
+
   const fotoFelder = await fotoFelderAusFormular(formData, bestehend.beuteFotoDateiname);
   const rasse = textOderUndefined(formData.get("rasse"));
 
@@ -689,6 +726,7 @@ async function volkFelderAktualisieren(
       rasse,
       notizen: textOderUndefined(formData.get("notizen")),
       ...brutraumAusFormular(formData),
+      ...waben.daten,
       ...klimadeckelAusFormular(formData),
       ...fotoFelder,
     },
@@ -2201,6 +2239,53 @@ export async function zuchtKoeniginnenAnlegen(zuchtserieId: string, formData: Fo
 
 // --- Stockkarten-Eintrag ----------------------------------------------------
 
+// Gegebene (+) oder entnommene (−) Waben einer Art: ganze Zahl, höchstens
+// WABEN_AENDERUNG_MAX in jede Richtung, 0 = keine Angabe.
+function wabenAenderungOderNull(wert: FormDataEntryValue | null): number | null {
+  const zahl = zahlOderNull(wert);
+  if (zahl === null) return null;
+  const gerundet = Math.max(-WABEN_AENDERUNG_MAX, Math.min(WABEN_AENDERUNG_MAX, Math.round(zahl)));
+  return gerundet === 0 ? null : gerundet;
+}
+
+// Werden mehr Waben entnommen, als laut Wabenbestand im Volk sind? Dann
+// eine Meldung statt Speichern. Völker ohne erfassten Bestand werden nicht
+// geprüft. Eine schon angekommene Sendung (Warteschlange) gilt als geprüft.
+async function wabenEntnahmePruefen(
+  volkIds: string[],
+  formData: FormData,
+  ohneEintragId?: string
+): Promise<{ fehler: string } | null> {
+  const summe = aenderungSumme(
+    Object.fromEntries(
+      WABEN_AENDERUNGS_ARTEN.map((art) => [art.feld, wabenAenderungOderNull(formData.get(art.feld))])
+    )
+  );
+  if (summe >= 0) return null;
+  const sendungId = formData.get("sendungId")?.toString() || null;
+  const zuPruefen = sendungId
+    ? (
+        await prisma.volk.findMany({
+          where: { id: { in: volkIds }, eintraege: { none: { sendungId } } },
+          select: { id: true },
+        })
+      ).map((volk) => volk.id)
+    : volkIds;
+  const bestaende = await wabenbestaendeLaden(zuPruefen, ohneEintragId);
+  const zuWenig = [...bestaende].filter(([, bestand]) => bestand !== null && bestand + summe < 0);
+  if (zuWenig.length === 0) return null;
+  const namen = await prisma.volk.findMany({
+    where: { id: { in: zuWenig.map(([id]) => id) } },
+    select: { id: true, name: true },
+  });
+  const text = zuWenig
+    .map(([id, bestand]) => `${namen.find((volk) => volk.id === id)?.name ?? "Volk"} hat ${bestand}`)
+    .join(", ");
+  return {
+    fehler: `Du entnimmst ${-summe} Waben, aber ${text}. Bitte die Waben prüfen oder den Bestand beim Volk korrigieren.`,
+  };
+}
+
 // Gemeinsam für Anlegen und Aktualisieren: liest alle Stockkarten-Felder aus
 // dem Formular. `null` statt `undefined` bei leeren Feldern funktioniert für
 // beide Fälle gleich gut (bei nullable Feldern setzt Prisma auch beim
@@ -2215,11 +2300,11 @@ function stockkartenEintragFelderAusFormular(formData: FormData) {
     drohnenbruetig: checkboxJaNein(formData.get("drohnenbruetig")),
     volksstaerke: zahlOderNull(formData.get("volksstaerke")),
     bebrueteteWaben: zahlOderNull(formData.get("bebrueteteWaben")),
-    leerwaben: zahlOderNull(formData.get("leerwaben")),
-    mittelwaende: zahlOderNull(formData.get("mittelwaende")),
-    brutwaben: zahlOderNull(formData.get("brutwaben")),
-    futterwaben: zahlOderNull(formData.get("futterwaben")),
-    baurahmenDrohnenrahmen: zahlOderNull(formData.get("baurahmenDrohnenrahmen")),
+    leerwaben: wabenAenderungOderNull(formData.get("leerwaben")),
+    mittelwaende: wabenAenderungOderNull(formData.get("mittelwaende")),
+    brutwaben: wabenAenderungOderNull(formData.get("brutwaben")),
+    futterwaben: wabenAenderungOderNull(formData.get("futterwaben")),
+    baurahmenDrohnenrahmen: wabenAenderungOderNull(formData.get("baurahmenDrohnenrahmen")),
     varroaZaehlweise: enumWertOderNull(VARROA_ZAEHLWEISEN, formData.get("varroaZaehlweise")),
     varroaAnzahl: zahlOderNull(formData.get("varroaAnzahl")),
     varroaGemuellTage: zahlOderNull(formData.get("varroaGemuellTage")),
@@ -2722,6 +2807,8 @@ export async function stockkartenEintragNeu(volkId: string, formData: FormData):
   if ((await prisma.volk.count({ where: { id: volkId } })) === 0) {
     return { fehler: "Dieses Volk gibt es nicht mehr. Der Eintrag wurde nicht gespeichert." };
   }
+  const wabenFehler = await wabenEntnahmePruefen([volkId], formData);
+  if (wabenFehler) return wabenFehler;
 
   await stockkartenEintragSpeichern(volkId, formData);
 
@@ -2757,6 +2844,8 @@ export async function stockkartenEintraegeFuerStandNeu(
   if (voelker.length === 0) {
     return { fehler: "Keines der gewählten Völker steht (noch) an diesem Stand. Bitte die Auswahl prüfen." };
   }
+  const wabenFehler = await wabenEntnahmePruefen(voelker.map((volk) => volk.id), formData);
+  if (wabenFehler) return wabenFehler;
 
   for (const volk of voelker) {
     await stockkartenEintragSpeichern(volk.id, formData);
@@ -2787,6 +2876,8 @@ export async function stockkartenEintragAktualisieren(
   if (!vorher) {
     return { fehler: "Diesen Eintrag gibt es nicht mehr. Vielleicht wurde er inzwischen gelöscht." };
   }
+  const wabenFehler = await wabenEntnahmePruefen([vorher.volkId], formData, eintragId);
+  if (wabenFehler) return wabenFehler;
 
   const honigernte = await honigernteAusFormular(formData, vorher.volkId, eintragId);
   const fuettererAktion = formData.has("fuettererModus")

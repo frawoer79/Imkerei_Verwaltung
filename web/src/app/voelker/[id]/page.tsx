@@ -21,6 +21,8 @@ import { VolkFotoLightbox } from "@/components/volk-foto-lightbox";
 import { GewichtVerlauf } from "@/components/gewicht-verlauf";
 import { ErsteDurchsichtKnopf, StandSammelAktionen } from "@/components/stand-sammel-aktionen";
 import { letzteBewertungenLaden, letzteWabenzahlenLaden } from "@/lib/letzte-durchsicht";
+import { wabenbestaendeLaden, wabenbestandLaden } from "@/lib/wabenbestand";
+import { wabenAenderungText } from "@/lib/waben";
 import { sortiereVoelker } from "@/lib/voelker-sortierung";
 import {
   BEURTEILUNGS_KRITERIEN,
@@ -452,6 +454,7 @@ export default async function VolkDetailPage({
         : undefined,
     };
   });
+  const wabenBestaende = await wabenbestaendeLaden(standVoelkerRoh.map((standVolk) => standVolk.id));
   const standVoelker = sortiereVoelker(standVoelkerRoh, volk.bienenstand.voelkerSortierung).map((standVolk) => ({
     id: standVolk.id,
     name: standVolk.name,
@@ -459,6 +462,7 @@ export default async function VolkDetailPage({
     koeniginFarbe: anzeigeFarbe(standVolk.koenigin?.jahrgang, standVolk.koenigin?.zeichenFarbe)?.hex ?? null,
     letzteDurchsicht: letzteWabenzahlen.get(standVolk.id) ?? null,
     letzteBewertungen: letzteBewertungen.get(standVolk.id) ?? null,
+    wabenBestand: wabenBestaende.get(standVolk.id) ?? null,
   }));
 
   // Honigräume, die gerade auf dem Volk sitzen - beim neuen Eintrag stehen sie
@@ -599,8 +603,24 @@ export default async function VolkDetailPage({
     </div>
   );
 
+  const eigenerWabenBestand = volk.wabenStandAm ? await wabenbestandLaden(volk.id) : null;
   const honigraeumeUndNotizen = (
     <>
+      {eigenerWabenBestand !== null ? (
+        <p className="text-sm">
+          <span className="text-muted">Waben im Brutraum: </span>
+          {eigenerWabenBestand}
+        </p>
+      ) : (
+        !volk.archiviert && (
+          <p className="text-sm">
+            <span className="text-muted">Waben im Brutraum: </span>
+            <Link href={`/voelker/${volk.id}/bearbeiten#waben`} className="font-semibold text-accent hover:underline">
+              noch nicht erfasst, jetzt nachtragen
+            </Link>
+          </p>
+        )
+      )}
       {offeneAufsaetze.length > 0 && (
         <p className="text-sm">
           <span className="text-muted">Honigräume drauf: </span>
@@ -995,6 +1015,7 @@ export default async function VolkDetailPage({
             ]
               .filter(Boolean)
               .join(" · ");
+            const wabenText = wabenAenderungText(eintrag);
             const honigGeerntet = eintrag.honigGeerntet || eintrag.honigertragKg !== null || !!eintrag.honigart;
             // Übrige Angaben als kompakte Chips: Bezeichnung grau, Wert normal,
             // Zusatz grau dahinter.
@@ -1010,6 +1031,16 @@ export default async function VolkDetailPage({
                 schluessel: "bebruetet",
                 bezeichnung: "Bebrütet",
                 wert: anzahlText(eintrag.bebrueteteWaben, "Wabe", "Waben"),
+              },
+              wabenText.gegeben && {
+                schluessel: "waben-gegeben",
+                bezeichnung: "Waben gegeben",
+                wert: wabenText.gegeben,
+              },
+              wabenText.entnommen && {
+                schluessel: "waben-entnommen",
+                bezeichnung: "Waben entnommen",
+                wert: wabenText.entnommen,
               },
               eintrag.gewichtKg !== null && {
                 schluessel: "gewicht",

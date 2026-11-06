@@ -9,6 +9,7 @@ import {
 } from "@/components/sicheres-formular";
 import { BrutraumAuswahl } from "@/components/brutraum-auswahl";
 import { DeckelAuswahl } from "@/components/deckel-auswahl";
+import { WabenStartFelder } from "@/components/waben-start-felder";
 import { EinzelfotoAuswahl } from "@/components/einzelfoto-auswahl";
 import {
   KoeniginWahlBeimAnlegen,
@@ -96,6 +97,14 @@ export function VolkAnlegenDialog({
           )}
 
           <BrutraumAuswahl brutraeume={brutraeume} />
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Waben im Brutraum</legend>
+            <p className="-mt-1 text-xs text-muted">
+              Was jetzt in der Beute hängt, vom Ableger mit einer Wabe bis zur vollen Zarge. Damit kann die
+              Durchsicht Waben entnehmen.
+            </p>
+            <WabenStartFelder brutraeume={brutraeume} pflicht />
+          </fieldset>
           <DeckelAuswahl klimadeckel={klimadeckel} />
 
           <EinzelfotoAuswahl

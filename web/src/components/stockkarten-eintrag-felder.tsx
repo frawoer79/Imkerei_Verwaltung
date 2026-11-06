@@ -2,6 +2,7 @@ import { Label, Input, Textarea, Select } from "@/components/ui";
 import { Aufklappbar } from "@/components/aufklappbar";
 import { BewertungsSchieber } from "@/components/bewertungs-schieber";
 import { ZahlStepper } from "@/components/zahl-stepper";
+import { WabenAenderungFelder } from "@/components/waben-aenderung-felder";
 import { GewichtFelder } from "@/components/gewicht-felder";
 import { WIEGEMETHODE_OPTIONEN } from "@/lib/gewicht-summe";
 import { VarroaBefall } from "@/components/varroa-befall";
@@ -304,6 +305,8 @@ export function StockkartenEintragFelder({
   neu = false,
   letzteDurchsicht = null,
   letzteBewertungen = null,
+  wabenBestand,
+  wabenNachtragenHref,
 }: {
   werte?: StockkartenEintragDefaults;
   /// Honigraumgrößen und Wabenmaße aus den Einstellungen - Grundlage der
@@ -328,6 +331,11 @@ export function StockkartenEintragFelder({
   letzteDurchsicht?: LetzteWabenzahlen | null;
   /// Wertungen der letzten Durchsichten - als Ring am Bewertungs-Strahl.
   letzteBewertungen?: LetzteBewertungen | null;
+  /// Waben in der Beute vor dieser Durchsicht (null = beim Volk noch nicht
+  /// erfasst, weglassen = keine Angabe), siehe WabenAenderungFelder.
+  wabenBestand?: number | null;
+  /// Wohin der Hinweis "Waben nachtragen" führt.
+  wabenNachtragenHref?: string;
 }) {
   // Beim Bearbeiten: um wie viel Prozent der gespeicherte Ertrag von der
   // damaligen Schätzung abweicht - damit der Schieberegler wieder dort steht,
@@ -393,7 +401,7 @@ export function StockkartenEintragFelder({
       <Aufklappbar
         titel="Waben"
         symbol={<IconWabenrahmen className="h-4 w-4" />}
-        hinweis="Waben, die du dem Volk bei dieser Durchsicht gegeben oder entnommen hast, je Art getrennt."
+        hinweis="Waben, die du dem Volk bei dieser Durchsicht gegeben (+) oder entnommen (−) hast, je Art getrennt."
         startOffen={hatWert(
           werte.leerwaben,
           werte.mittelwaende,
@@ -402,19 +410,8 @@ export function StockkartenEintragFelder({
           werte.baurahmenDrohnenrahmen
         )}
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Stepper statt Zahlenfeld: am Stand ohne Tastatur, mit Handschuhen. */}
-          <ZahlStepper name="leerwaben" label="Leerwaben" defaultValue={werte.leerwaben} max={20} />
-          <ZahlStepper name="mittelwaende" label="Mittelwände" defaultValue={werte.mittelwaende} max={20} />
-          <ZahlStepper name="brutwaben" label="Brutwaben" defaultValue={werte.brutwaben} max={20} />
-          <ZahlStepper name="futterwaben" label="Futterwaben" defaultValue={werte.futterwaben} max={20} />
-          <ZahlStepper
-            name="baurahmenDrohnenrahmen"
-            label="Baurahmen / Drohnenrahmen"
-            defaultValue={werte.baurahmenDrohnenrahmen}
-            max={20}
-          />
-        </div>
+        {/* Stepper statt Zahlenfeld: am Stand ohne Tastatur, mit Handschuhen. */}
+        <WabenAenderungFelder werte={werte} bestand={wabenBestand} nachtragenHref={wabenNachtragenHref} />
       </Aufklappbar>
 
       <Aufklappbar

@@ -226,6 +226,21 @@ model Volk {
   beuteFotoBlendePosition Float @default(0.15)
   beuteFotoBlendeBreite   Float @default(0.55)
 
+  /// Waben im Brutraum, als Ist-Stand je Art erfasst: beim Anlegen des
+  /// Volkes (Pflicht, mindestens eine) oder später beim Bearbeiten
+  /// nachgetragen bzw. korrigiert. `wabenStandAm` ist der Zeitpunkt dieser
+  /// Erfassung - die Waben, die Durchsichten danach geben (positiv) oder
+  /// entnehmen (negativ), werden darauf gerechnet, siehe
+  /// web/src/lib/wabenbestand.ts. Die Aufteilung je Art gilt nur für den
+  /// Erfassungszeitpunkt (Mittelwände werden ausgebaut, Brut schlüpft),
+  /// fortgeschrieben wird die Gesamtzahl. Alles leer = noch nicht erfasst
+  /// (Völker von vor dieser Funktion).
+  wabenBrut         Int?
+  wabenFutter       Int?
+  wabenLeer         Int?
+  wabenMittelwaende Int?
+  wabenStandAm      DateTime?
+
   /// Siehe Bienenstand.archiviert - gleiches Prinzip auf Volk-Ebene.
   archiviert   Boolean   @default(false)
   archiviertAm DateTime?
@@ -635,6 +650,9 @@ model StockkartenEintrag {
   bebrueteteWaben        Int?
 
   // --- Brutraum: Waben genommen/gegeben ---------------------------------
+  // Positiv = dem Volk gegeben, negativ = entnommen (seit 11/2026, ältere
+  // Einträge sind alle positiv). Summe aller Arten verändert den
+  // Wabenbestand des Volkes, siehe Volk.wabenStandAm.
   leerwaben              Int?
   mittelwaende           Int?
   brutwaben              Int?
