@@ -27,7 +27,12 @@ async function testerSchemas() {
     const { rows } = await client.query(
       "SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'tester\\_%' ORDER BY schema_name",
     );
-    return rows.map((zeile) => zeile.schema_name).filter((name) => SCHEMA_MUSTER.test(name));
+    // In der öffentlichen Demo (web/src/lib/demo.ts) werden die Plätze
+    // "tester_demo<n>" beim Start ohnehin gelöscht und neu aufgebaut.
+    const demo = ["1", "ja", "an", "true"].includes((process.env.DEMO_MODUS ?? "").trim().toLowerCase());
+    return rows
+      .map((zeile) => zeile.schema_name)
+      .filter((name) => SCHEMA_MUSTER.test(name) && !(demo && /^tester_demo[0-9]+$/.test(name)));
   } finally {
     await client.end();
   }

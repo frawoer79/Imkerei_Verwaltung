@@ -22,8 +22,12 @@ export const BASIS_SCHEMA = "public";
 export function clientFuerSchema(schema: string): PrismaClient {
   let client = clients.get(schema);
   if (!client) {
+    // Öffentliche Demo (lib/demo.ts): viele Plätze mit je eigenem Schema.
+    // Je Platz höchstens zwei Verbindungen, sonst gingen PostgreSQL die
+    // Verbindungen aus (Standard: 10 je Client, 100 insgesamt).
+    const demoPlatz = /^tester_demo[0-9]+$/.test(schema) && Boolean(process.env.DEMO_MODUS);
     const adapter = new PrismaPg(
-      { connectionString: process.env.DATABASE_URL },
+      { connectionString: process.env.DATABASE_URL, ...(demoPlatz ? { max: 2 } : {}) },
       schema === BASIS_SCHEMA ? undefined : { schema },
     );
     // Erst prüfen, dann protokollieren: Abgelehntes landet nicht in der Historie.

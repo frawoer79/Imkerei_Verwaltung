@@ -1,4 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import { DemoLeiste } from "@/components/demo-leiste";
+import { DemoUploadSperre } from "@/components/demo-upload-sperre";
+import { istDemo, istDemoPlatz } from "@/lib/demo";
 import { lubwLage } from "@/lib/bundeslaender";
 import { SICHTBARE_MASSNAHMEN } from "@/lib/massnahmen-sichtbar";
 import { Archivo, Bricolage_Grotesque, Figtree, Geist, Geist_Mono, IBM_Plex_Mono } from "next/font/google";
@@ -114,7 +117,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // hier aber nicht mehr als angemeldet (siehe konto.ts).
   const konto = await aktuellesKonto();
   const angemeldet = konto !== null;
-  const testerName = konto?.art === "tester" ? konto.name : null;
+  // Öffentliche Demo (lib/demo.ts): Besucher sind technisch Tester, sollen
+  // aber nicht "Testzugang Demo" lesen, sondern die Demo-Leiste sehen.
+  const demo = istDemo() && konto?.art === "tester" && istDemoPlatz(konto.testzugangId);
+  const testerName = konto?.art === "tester" && !demo ? konto.name : null;
   // Helfer mit "Nur lesen": globals.css blendet damit Knöpfe zum Anlegen,
   // Bearbeiten und Löschen aus (die Sperre selbst sitzt in lib/prisma.ts).
   const nurLesen = konto?.art === "nutzer" && konto.nurLesen;
@@ -139,6 +145,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       data-design={design}
       data-nur-lesen={nurLesen ? "" : undefined}
       data-helfer={konto?.art === "nutzer" ? "" : undefined}
+      data-demo={demo ? "" : undefined}
       className={`${geistSans.variable} ${geistMono.variable} ${design !== "aktuell" ? `${figtree.variable} ${bricolage.variable} ${archivo.variable} ${plexMono.variable}` : ""} h-full antialiased`}
     >
       <head>
@@ -148,6 +155,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {angemeldet ? (
           <>
             {konto.art === "nutzer" && <HelferLeiste name={konto.name} nurLesen={konto.nurLesen} />}
+            {demo && <DemoLeiste />}
+            {demo && <DemoUploadSperre />}
             {update && <UpdateLeiste hinweis={update} />}
             <OfflineLeiste />
             {/* Seitenleiste und Inhalt als eine Gruppe (16rem + 80rem = 96rem):

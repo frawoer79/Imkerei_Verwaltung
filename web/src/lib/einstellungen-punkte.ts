@@ -32,6 +32,8 @@ export type EinstellungsPunkt = {
   nurHelfer?: boolean;
   // Nur auf der Instanz des Entwicklers (lib/hauptzugang.ts, entwicklerSeiten).
   nurEntwickler?: boolean;
+  // In der öffentlichen Demo ausgeblendet (lib/demo.ts).
+  nichtDemo?: boolean;
 };
 
 export type EinstellungsGruppe = { titel: string; nurAdmin?: boolean; punkte: EinstellungsPunkt[] };
@@ -58,8 +60,8 @@ export const EINSTELLUNGS_GRUPPEN: EinstellungsGruppe[] = [
   {
     titel: "Verbindungen",
     punkte: [
-      { schluessel: "email", href: "/einstellungen/email", label: "E-Mail-Versand", icon: IconBrief, bereiche: ["dokumente", "velutina"] },
-      { schluessel: "kalender", href: "/einstellungen/kalender", label: "Kalender-Abo", icon: IconKalender },
+      { schluessel: "email", href: "/einstellungen/email", label: "E-Mail-Versand", icon: IconBrief, bereiche: ["dokumente", "velutina"], nichtDemo: true },
+      { schluessel: "kalender", href: "/einstellungen/kalender", label: "Kalender-Abo", icon: IconKalender, nichtDemo: true },
     ],
   },
   {
@@ -81,7 +83,9 @@ export function punktSichtbar(
   admin: boolean,
   helfer = false,
   entwickler = false,
+  demo = false,
 ) {
+  if (demo && punkt.nichtDemo) return false;
   if (helfer) return Boolean(punkt.auchHelfer || punkt.nurHelfer);
   if (punkt.nurHelfer) return false;
   if (punkt.nurEntwickler && !entwickler) return false;
@@ -95,9 +99,10 @@ export function sichtbareGruppen(
   admin: boolean,
   helfer = false,
   entwickler = false,
+  demo = false,
 ): EinstellungsGruppe[] {
   return EINSTELLUNGS_GRUPPEN.map((gruppe) => ({
     ...gruppe,
-    punkte: gruppe.punkte.filter((punkt) => punktSichtbar(punkt, aus, admin, helfer, entwickler)),
+    punkte: gruppe.punkte.filter((punkt) => punktSichtbar(punkt, aus, admin, helfer, entwickler, demo)),
   })).filter((gruppe) => gruppe.punkte.length > 0);
 }

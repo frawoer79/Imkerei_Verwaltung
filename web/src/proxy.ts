@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { ADMIN_KONTO, SITZUNGS_COOKIE_NAME, sitzungAusWert, testerSitzungGueltig } from "@/lib/anmeldung";
 import { basisPrisma } from "@/lib/datenbank";
+import { aktivitaetVermerken, DEMO_GESPERRTE_SEITEN, istDemo, istDemoPlatz, platzAbgelaufen } from "@/lib/demo";
 import { einrichtungNoetig } from "@/lib/hauptzugang";
 import { nutzerIdAusKonto, nutzerSitzungGueltig, PASSWORT_SEITE } from "@/lib/nutzer";
 
@@ -14,8 +15,9 @@ import { nutzerIdAusKonto, nutzerSitzungGueltig, PASSWORT_SEITE } from "@/lib/nu
 // Kennung in der Adresse (web/src/app/kalender/[datei]/route.ts). Und die
 // persönlichen Einladungslinks für Testzugänge (/einladung/<token>) - wer sie
 // öffnet, hat noch kein Konto. Dazu die Gesundheitsprüfung für Docker und
-// "Passwort vergessen" samt Link aus der Mail (/passwort-vergessen/<token>).
-const OEFFENTLICHE_PFADE = ["/login", "/passwort-vergessen", "/icon.png", "/apple-icon.png", "/manifest.webmanifest", "/api/gesund"];
+// "Passwort vergessen" samt Link aus der Mail (/passwort-vergessen/<token>)
+// und robots.txt (sagt Suchmaschinen, dass hier nichts zu finden ist).
+const OEFFENTLICHE_PFADE = ["/login", "/passwort-vergessen", "/robots.txt", "/icon.png", "/apple-icon.png", "/manifest.webmanifest", "/api/gesund"];
 const EINRICHTUNG_PFAD = "/einrichtung";
 
 // Gibt es den Testzugang noch, und ist das Cookie nach dem letzten
@@ -31,6 +33,7 @@ async function testzugangAktiv(testzugangId: string, ausgestelltAm: number): Pro
 }
 
 export async function proxy(request: NextRequest) {
+  if (istDemo()) return demoProxy(request);
   const { pathname } = request.nextUrl;
 
   if (pathname === "/login" && (await einrichtungNoetig())) {
@@ -86,6 +89,62 @@ export async function proxy(request: NextRequest) {
     if (umleitung && umleitung !== pathname) return NextResponse.redirect(new URL(umleitung, request.url));
   }
 
+  return NextResponse.next();
+}
+
+// --- Öffentliche Demo (lib/demo.ts) ---------------------------------------
+//
+// Kein Login, keine Einrichtung: wer keinen gültigen Demo-Platz hat, landet
+// auf der Startseite der Demo und holt sich dort einen. Ein Platz gilt nur,
+// solange er belegt und nicht abgelaufen ist (Ruhezeit, Datumswechsel).
+const DEMO_OEFFENTLICH = [
+  "/demo",
+  "/impressum",
+  "/datenschutz",
+  "/robots.txt",
+  "/icon.png",
+  "/apple-icon.png",
+  "/manifest.webmanifest",
+  "/api/gesund",
+];
+
+async function demoProxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (DEMO_OEFFENTLICH.includes(pathname) || pathname.startsWith("/icons/")) {
+    return NextResponse.next();
+  }
+  // Kalender-Abos bräuchten eine dauerhafte Adresse, die gibt es hier nicht.
+  if (pathname.startsWith("/kalender/")) return new NextResponse(null, { status: 404 });
+
+  const sitzung = sitzungAusWert(request.cookies.get(SITZUNGS_COOKIE_NAME)?.value);
+  const platzId = sitzung && istDemoPlatz(sitzung.konto) ? sitzung.konto : null;
+  const platz = platzId
+    ? await basisPrisma.testzugang.findUnique({
+        where: { id: platzId },
+        select: { eingerichtetAm: true, sitzungenGueltigAb: true, letzteAnmeldung: true },
+      })
+    : null;
+  if (!sitzung || !platzId || !platz || !testerSitzungGueltig(platz, sitzung.ausgestelltAm) || platzAbgelaufen(platz)) {
+    const ziel = new URL("/demo", request.url);
+    if (sitzung) ziel.searchParams.set("hinweis", "abgelaufen");
+    const antwort = NextResponse.redirect(ziel);
+    if (sitzung) antwort.cookies.delete(SITZUNGS_COOKIE_NAME);
+    return antwort;
+  }
+
+  if (
+    pathname === "/login" ||
+    pathname === EINRICHTUNG_PFAD ||
+    pathname.startsWith("/passwort-vergessen") ||
+    pathname.startsWith("/einladung/")
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
+  if (DEMO_GESPERRTE_SEITEN.some((pfad) => pathname.startsWith(pfad))) {
+    return NextResponse.redirect(new URL("/einstellungen", request.url));
+  }
+
+  await aktivitaetVermerken(platzId, platz.letzteAnmeldung);
   return NextResponse.next();
 }
 

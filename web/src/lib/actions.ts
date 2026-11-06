@@ -1,5 +1,7 @@
 "use server";
 
+import { istDemo, istDemoPlatz, platzFreigeben } from "@/lib/demo";
+import { aktuellesKonto } from "@/lib/konto";
 import { istBundesland } from "@/lib/bundeslaender";
 import { behandlungenAmStand, behandlungenAmVolk, sperrtextStand, sperrtextVolk } from "@/lib/bestandsbuch-sperre";
 import { fuettererAktionAusFormular } from "@/lib/fuetterer";
@@ -151,9 +153,14 @@ export async function anmelden(
 }
 
 export async function abmelden() {
+  // Öffentliche Demo: Abmelden gibt den Platz gleich zum Neuaufbau frei.
+  if (istDemo()) {
+    const konto = await aktuellesKonto();
+    if (konto?.art === "tester" && istDemoPlatz(konto.testzugangId)) await platzFreigeben(konto.testzugangId);
+  }
   const cookieStore = await cookies();
   cookieStore.delete(SITZUNGS_COOKIE_NAME);
-  redirect("/login");
+  redirect(istDemo() ? "/demo" : "/login");
 }
 
 function textOderUndefined(wert: FormDataEntryValue | null): string | undefined {

@@ -2,11 +2,27 @@
 // regelmäßigen Abrufe, die laufen, solange der Server läuft:
 //   - Velutina-Meldungen bei der LUBW (web/src/lib/velutina.ts), alle paar Stunden
 //   - Update-Prüfung bei GitHub (web/src/lib/update.ts), einmal am Tag
+//   - nur mit DEMO_MODUS: Plätze der Demo freigeben und neu aufbauen
+//     (web/src/lib/demo-aufbau.ts), alle 20 Sekunden
 export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   if (process.env.NEXT_PHASE === "phase-production-build") return;
 
   const STUNDE_MS = 60 * 60 * 1000;
+
+  const { istDemo } = await import("@/lib/demo");
+  if (istDemo()) {
+    const { plaetzeVorbereiten, demoTakt } = await import("@/lib/demo-aufbau");
+    setTimeout(async () => {
+      try {
+        await plaetzeVorbereiten();
+      } catch (fehler) {
+        console.error("Demo: Plätze vorbereiten fehlgeschlagen:", fehler);
+      }
+      void demoTakt();
+      setInterval(() => void demoTakt(), 20_000);
+    }, 3_000);
+  }
 
   if (process.env.VELUTINA_ABRUF !== "aus") {
     const { velutinaAbgleich, abgleichFaellig, ABRUF_ABSTAND_MS } = await import("@/lib/velutina");

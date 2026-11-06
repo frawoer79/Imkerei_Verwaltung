@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { UpdateLeiste } from "@/components/update-leiste";
+import { DemoLeiste } from "@/components/demo-leiste";
 import { AenderungsText } from "@/components/aenderungs-text";
 import { notFound } from "next/navigation";
 import { entwicklerSeiten } from "@/lib/hauptzugang";
@@ -460,6 +461,12 @@ export default async function StyleguidePage() {
               <UpdateLeiste hinweis={{ version: "1.4.1", sicherheit: true, hauptversion: false }} />
             </div>
             <Quelle>{"Leiste oben: <UpdateLeiste> (neue Version, nur Hauptzugang, lib/update.ts)"}</Quelle>
+          </div>
+          <div>
+            <div className="pointer-events-none overflow-hidden rounded-md" inert>
+              <DemoLeiste />
+            </div>
+            <Quelle>{"Leiste oben: <DemoLeiste> (nur öffentliche Demo, lib/demo.ts). Dazu <DemoUploadSperre>, <DemoRahmen>, <RepositoryLink>"}</Quelle>
           </div>
           <div>
             <AenderungsText text={"## Neu\n- **Eimer** einzeln wiegen\n- Sortierung im Lager\n\nAußerdem kleinere Korrekturen."} />
