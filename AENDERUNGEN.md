@@ -14,6 +14,10 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## 1.2.1
+
+- Die Anleitung beschreibt jetzt den Wabenbestand: Waben beim Anlegen eines Volkes, Nachtragen bei älteren Völkern, Waben geben und entnehmen in der Durchsicht. Mit neuen Bildern.
+
 ## 1.2.0
 
 - Beim Anlegen eines Volkes werden die Waben im Brutraum erfasst, getrennt nach Brutwaben, Futterwaben, Leerwaben und Mittelwänden. Mindestens eine Wabe, höchstens so viele, wie in den Brutraum passen.

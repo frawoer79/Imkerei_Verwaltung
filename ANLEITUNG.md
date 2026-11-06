@@ -92,7 +92,7 @@ Nach dem Einrichten ist die App leer. Am schnellsten kommst du so zu deiner erst
 1. **Einstellungen → Bienenhalter:** Name, Anschrift und Bundesland prüfen. Das steht später im Kopf des Behandlungsnachweises, und am Bundesland erkennt die App, ob sie dir die Hornissen-Meldungen aus Baden-Württemberg zeigt.
 2. **Einstellungen → Beutensysteme:** dein System hinzufügen, z. B. Zander oder Deutsch Normalmaß (siehe unten). Sonst kannst du beim Volk keinen passenden Brutraum wählen.
 3. **Bienenstände → Neuer Bienenstand:** deinen ersten Stand anlegen.
-4. **Im Stand → Neues Volk:** die Völker anlegen.
+4. **Im Stand → Neues Volk:** die Völker anlegen, jeweils mit den Waben, die gerade im Brutraum hängen.
 5. **Im Volk → Durchsicht erfassen:** die erste Durchsicht festhalten.
 
 Königinnen, Belegstellen, Medikamente und Lager kannst du später nach Bedarf ergänzen.
@@ -168,11 +168,26 @@ Die Knöpfe **[Durchsicht erfassen]** und **[Maßnahme]** halten etwas für mehr
 
 ### Volk anlegen
 
-Auf der Seite des Stands **[+ Neues Volk]**. Pflicht ist nur der Name bzw. die Stocknummer. Dazu kommen Rasse, Jahrgang und Kennzeichnung der Königin, der **Brutraum** (Zarge aus deinem Beutensystem) mit der **Anzahl** (1 = einräumig, 2 = zweiräumig …), der **Deckel** (Standarddeckel oder ein Klimadeckel aus dem Lager) und optional ein Foto der Beute.
+Auf der Seite des Stands **[+ Neues Volk]**. Pflicht sind der Name bzw. die Stocknummer und die **Waben im Brutraum** (siehe unten). Dazu kommen Rasse, Jahrgang und Kennzeichnung der Königin, der **Brutraum** (Zarge aus deinem Beutensystem) mit der **Anzahl** (1 = einräumig, 2 = zweiräumig …), der **Deckel** (Standarddeckel oder ein Klimadeckel aus dem Lager) und optional ein Foto der Beute.
 
 <img src="anleitung/bilder/volk-neu.webp" width="420" alt="Dialog Neues Volk anlegen">
 
-*Neues Volk anlegen, hier mit einer Königin aus dem Bestand.*
+*Neues Volk anlegen: Name, Königin, Brutraum und Waben.*
+
+**Waben im Brutraum:** Du stellst mit + und − ein, was jetzt in der Beute hängt, getrennt nach Brutwaben, Futterwaben, Leerwaben und Mittelwänden. Mindestens eine Wabe, etwa beim Ableger, höchstens so viele, wie in den Brutraum passen. Die Grenze rechnet die App aus dem gewählten Brutraum: Rähmchen je Zarge mal Anzahl, bei Zander einräumig also 10, zweiräumig 20. Die Zeile darunter zählt mit, z. B. „Zusammen 6 von 10 Waben im Brutraum“.
+
+<img src="anleitung/bilder/volk-waben.webp" width="420" alt="Waben im Brutraum beim Anlegen eines Ablegers">
+
+*Ein Ableger auf 6 Waben: 3 Brutwaben, 1 Futterwabe, 2 Mittelwände.*
+
+Ab dann führt die App den **Wabenbestand**: Was du in einer Durchsicht gibst oder entnimmst, rechnet sie dazu oder ab. Fortgeschrieben wird nur die Gesamtzahl. Welche Art eine Wabe hat, ändert sich im Volk von selbst (Mittelwände werden ausgebaut, Brut schlüpft), die Anzahl dagegen nur durch dich.
+
+> **Völker von früher nachtragen**  
+> Völker, die schon vor dieser Funktion angelegt waren, haben noch keinen Wabenbestand. Auf ihrer Seite steht dann *Waben im Brutraum: noch nicht erfasst, jetzt nachtragen*. Der Link führt zu **[Bearbeiten]**, wo du die Waben einträgst. Dort kannst du den Ist-Stand auch später jederzeit neu erfassen, etwa nach dem Einengen im Herbst.
+
+<img src="anleitung/bilder/volk-waben-nachtragen.webp" width="420" alt="Waben beim Bearbeiten nachtragen">
+
+*Unter Bearbeiten: Waben eines älteren Volks nachtragen.*
 
 > **Königin gleich mit anlegen**  
 > Gibst du hier Jahrgang oder Zeichen an, entsteht dazu automatisch eine Königin im Bereich [Königinnen](#koeniginnen). Dort kannst du sie später um Abstammung und Begattung ergänzen.
@@ -184,6 +199,7 @@ Auf der Seite des Stands **[+ Neues Volk]**. Pflicht ist nur der Name bzw. die S
 Ein Tipp auf die Kachel öffnet das Volk. Der Kopf ist auf allen Geräten gleich aufgebaut:
 
 - Links das Foto der Beute, daneben Name, **Plaketten** (Status, *QR gelernt*, *Fütterer drauf*) sowie Rasse, Betriebsweise (z. B. „2 × Zander ganz“) und ein Klimadeckel, falls vorhanden.
+- Unter der Königin die Zeile **Waben im Brutraum** mit dem aktuellen Wabenbestand.
 - Darunter eine eigene Zeile für die **Königin**, die gerade im Volk sitzt. Ein Tipp darauf öffnet ihre Seite. Rechts daneben steht **[Umweiseln]**.
 - Die Knöpfe **[Bearbeiten]**, **[Umziehen]** (an einen anderen Stand, wird im Verlauf vermerkt; fehlt, solange du nur einen Stand hast), **[QR-Code]** (siehe [QR-Codes](#qr)) und **[Status]** (aktiv, aufgelöst, verkauft oder verloren).
 
@@ -201,7 +217,7 @@ Setzt du eine neue Königin ein, tippst du in der Königin-Zeile auf **[Umweisel
 
 Es folgt der **Verlauf** auf einer eigenen, leicht getönten Fläche, neueste zuerst und nach Saison gegliedert. Jede Karte hat links einen Farbstreifen: grün für Durchsicht und Königin, grau für Maßnahmen, honigfarben für Behandlungen. Die Kopfzeile jeder Saison fasst zusammen, z. B. „6 Durchsichten · 3 Maßnahmen · 1 Behandlung“, mit der letzten Bewertung, Varroa und Gewicht. Im Verlauf stehen diese Karten:
 
-- **Durchsichten:** Jede Bewertung erscheint als kleiner Strahl mit grüner, gelber und roter Zone, einer Marke und dem Wertungstext, z. B. „Stark“ oder „Gut–Mittel“ (zwischen zwei Stufen). Gelb und rot tragen zusätzlich ein Warnzeichen. Alle übrigen Angaben stehen als kurze Chips darunter, nur was du wirklich ausgefüllt hast. Varroa über der Schadschwelle erscheint als roter Kasten. **[Durchsicht öffnen ›]** rechts oben öffnet den Eintrag.
+- **Durchsichten:** Jede Bewertung erscheint als kleiner Strahl mit grüner, gelber und roter Zone, einer Marke und dem Wertungstext, z. B. „Stark“ oder „Gut–Mittel“ (zwischen zwei Stufen). Gelb und rot tragen zusätzlich ein Warnzeichen. Alle übrigen Angaben stehen als kurze Chips darunter, nur was du wirklich ausgefüllt hast, z. B. *Waben gegeben: 1 Mittelwand* und *Waben entnommen: 3 Brutwaben*. Varroa über der Schadschwelle erscheint als roter Kasten. **[Durchsicht öffnen ›]** rechts oben öffnet den Eintrag.
 - **Maßnahmen**, die ohne Durchsicht angelegt wurden: „○ offen“ mit Termin oder „✓ erledigt“. Stift und Mülleimer bearbeiten bzw. löschen sie. Abhaken geht oben unter *Offene Maßnahmen*.
 - **Behandlungen** am Tag der Anwendung: Medikament, wogegen, Menge, Dauer und Wartezeit. Den vollständigen Nachweis gibt es unter [Behandlungen](#behandlungen). Verfahren ohne Medikament (TBE, Bannwabe …) erscheinen ebenfalls hier.
 - **Königinnenwechsel:** „Umgeweiselt alt → neu“ bzw. „Königin zugesetzt“. Die Saison-Zeile zählt sie mit.
@@ -233,7 +249,7 @@ Im Volk auf **[Durchsicht erfassen]** tippen. Datum und Uhrzeit sind auf „jetz
 | Abschnitt | Was hinein gehört |
 |---|---|
 | Brutraum | Haken nur für das, was du gesehen hast: Königin, Stifte, Larven, verdeckelte Brut, Weiselzellen, drohnenbrütig. Besetzte Wabengassen und bebrütete Waben stellst du mit + und − ein. Grau steht die Zahl vom letzten Mal; ein Tipp darauf übernimmt sie, das erste + zählt von dort weiter. |
-| Waben | Genommene oder gegebene Leerwaben, Mittelwände, Brut- und Futterwaben, Baurahmen, ebenfalls mit „letztes Mal“. |
+| Waben | Gegebene und entnommene Brutwaben, Futterwaben, Leerwaben, Mittelwände und Baurahmen. + gibt dem Volk eine Wabe, − entnimmt eine: „+2 gegeben“, „−3 entnommen“. Darunter steht, wie viele Waben danach in der Beute sind, z. B. „In der Beute: 14 → 12 Waben“. Entnehmen geht nur, solange Waben da sind. Ist der Wabenbestand noch nicht erfasst, erinnert ein Hinweis daran. |
 | Varroa | Zählweise (Puderzucker, Auswaschung, Gemülldiagnose), gezählte Milben, Probengröße bzw. Tage der Windel. Die App rechnet auf Milben je Tag bzw. Prozent um und vergleicht mit der Schadschwelle der Jahreszeit. Unter *Biotechnik* der Haken *Drohnenbrut geschnitten* und ein freies Feld. Verfahren mit Fahrplan wie TBE oder Bannwabe legst du unter [Behandlungen](#behandlungen) an. Tierarzneimittel gehören nicht hierher, sondern unter [Behandlungen](#behandlungen). |
 | Bewertung des Volkes | Regler für Volksstärke, Futtermenge, Sanftmut, Wabensitz, Schwarmtrieb, Legeleistung und Gesamteindruck, siehe unten. Dazu die Haken *Bienen haben mich angeflogen* und *Abgeschwärmt*. |
 | Honigraum & Ernte | Honigraum aufsetzen oder abnehmen, Ernte (die App schätzt die Menge aus den abgenommenen Zargen und Waben, du kannst sie anpassen) und Honigart. |
@@ -248,9 +264,9 @@ Jeder Regler hat sechs benannte Stufen, links die beste, rechts die schlechteste
 
 Ein grauer, gestrichelter **Ring** zeigt, wo du das Volk beim letzten Mal eingestuft hast, solange der Regler leer ist zusätzlich als Text „Letztes Mal: Stark (04.10.)“. Übernommen wird davon nichts, du entscheidest jedes Mal neu.
 
-<img src="anleitung/bilder/d-eintrag-dialog.webp" width="640" alt="Durchsicht erfassen, Abschnitt Brutraum"> <img src="anleitung/bilder/d-eintrag-beurteilung.webp" width="640" alt="Bewertung mit sechsstufigen Reglern"> <img src="anleitung/bilder/d-eintrag-varroa.webp" width="640" alt="Abschnitt Varroa"> <img src="anleitung/bilder/handy-eintrag.webp" width="260" alt="Bewertung am Handy">
+<img src="anleitung/bilder/d-eintrag-dialog.webp" width="640" alt="Durchsicht erfassen, Abschnitt Brutraum"> <img src="anleitung/bilder/d-eintrag-beurteilung.webp" width="640" alt="Bewertung mit sechsstufigen Reglern"> <img src="anleitung/bilder/d-eintrag-waben.webp" width="640" alt="Abschnitt Waben mit gegebenen und entnommenen Waben"> <img src="anleitung/bilder/d-eintrag-varroa.webp" width="640" alt="Abschnitt Varroa"> <img src="anleitung/bilder/handy-eintrag.webp" width="260" alt="Bewertung am Handy">
 
-*Brutraum: Haken für das Gesehene, Wabengassen mit „letztes Mal“.* · *Bewertung: sechs Stufen je Regler, der gestrichelte Ring zeigt die letzte Wertung.* · *Varroa: Zählweise und Milben, darunter Biotechnik.* · *Am Handy.*
+*Brutraum: Haken für das Gesehene, Wabengassen mit „letztes Mal“.* · *Bewertung: sechs Stufen je Regler, der gestrichelte Ring zeigt die letzte Wertung.* · *Waben: 3 Brutwaben entnommen, 1 Mittelwand gegeben. Unten der Bestand danach.* · *Varroa: Zählweise und Milben, darunter Biotechnik.* · *Am Handy.*
 
 Drei Abschnitte, die oft gebraucht werden:
 
@@ -307,7 +323,7 @@ Wenn du am Stand mehrere Völker gleich behandelt hast, zum Beispiel alle gefüt
 2. **[Weiter]**. Über *ändern* neben „Für: …“ kommst du zurück zur Auswahl, deine Eingaben bleiben dabei erhalten.
 3. Durchsicht bzw. Maßnahme ausfüllen und speichern. Der Knopf sagt, wie viele Einträge entstehen.
 
-Jedes gewählte Volk bekommt einen eigenen, vollständigen Eintrag in seinem Verlauf bzw. eine eigene Maßnahme. Die Fragen „Bewertung zur Königin?“ und „Honig ins Lager?“ stellt die App nur bei einem einzelnen Volk, weil beides am einzelnen Volk hängt.
+Jedes gewählte Volk bekommt einen eigenen, vollständigen Eintrag in seinem Verlauf bzw. eine eigene Maßnahme. Die Fragen „Bewertung zur Königin?“ und „Honig ins Lager?“ stellt die App nur bei einem einzelnen Volk, weil beides am einzelnen Volk hängt. Entnimmst du Waben, prüft die App beim Speichern jedes Volk einzeln. Hat eines zu wenige, nennt sie es mit seinem Bestand, und nichts wird gespeichert.
 
 <img src="anleitung/bilder/d-sammel-auswahl.webp" width="640" alt="Auswahl der Völker am Stand"> <img src="anleitung/bilder/d-sammel-formular.webp" width="640" alt="Durchsicht für Volk 2 und Volk 3"> <img src="anleitung/bilder/d-sammel-massnahme.webp" width="640" alt="Maßnahme für alle Völker des Stands">
 
