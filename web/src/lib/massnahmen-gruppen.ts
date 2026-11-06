@@ -6,7 +6,7 @@
 // rückwirkend für alle bisherigen Sammelmaßnahmen.
 
 /** Abstand der Anlegezeiten, bis zu dem Maßnahmen als ein Rutsch gelten. */
-const GLEICHZEITIG_MS = 10_000;
+export const GLEICHZEITIG_MS = 10_000;
 
 export type GruppierbareMassnahme = {
   text: string;

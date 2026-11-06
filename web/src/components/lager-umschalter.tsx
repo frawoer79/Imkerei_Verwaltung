@@ -1,19 +1,20 @@
 import Link from "next/link";
 
-export type LagerTeil = "material" | "erzeugnisse";
+export type LagerTeil = "material" | "erzeugnisse" | "verkaeufe";
 
 export const LAGER_TEILE: { teil: LagerTeil; href: string; label: string }[] = [
   { teil: "material", href: "/lager/material", label: "Material" },
   { teil: "erzeugnisse", href: "/lager/erzeugnisse", label: "Erzeugnisse" },
+  { teil: "verkaeufe", href: "/lager/verkaeufe", label: "Verkäufe" },
 ];
 
-// Umschalter unter der Überschrift der beiden Lager-Seiten: so wechselt man
-// zwischen Material und Erzeugnisse, ohne erst das Menü aufzuklappen. Gleiche
+// Umschalter unter der Überschrift der Lager-Seiten: so wechselt man
+// zwischen Material, Erzeugnissen und Verkäufen, ohne erst das Menü aufzuklappen. Gleiche
 // Optik wie die Reiter auf der Königinnen-Seite, aber als Links, weil es zwei
 // eigene Seiten sind.
 export function LagerUmschalter({ aktiv }: { aktiv: LagerTeil }) {
   return (
-    <nav aria-label="Lager" className="-mt-2 grid grid-cols-2 gap-1 rounded-lg bg-border p-1 sm:max-w-sm">
+    <nav aria-label="Lager" className="-mt-2 grid grid-cols-3 gap-1 rounded-lg bg-border p-1 sm:max-w-md">
       {LAGER_TEILE.map(({ teil, href, label }) => (
         <Link
           key={teil}

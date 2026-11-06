@@ -57,6 +57,7 @@ export function KoeniginEreignisFormular({
   return (
     <form onSubmit={speichern} className="flex flex-col gap-3">
       <KoeniginEreignisFelder
+        key={formularSchluessel}
         idPraefix="ereignis-neu"
         art={art}
         onArtChange={setArt}

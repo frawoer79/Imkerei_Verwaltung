@@ -2,6 +2,7 @@ import { abgeschalteteBereiche } from "@/lib/bereiche";
 import { SICHTBARE_MASSNAHMEN } from "@/lib/massnahmen-sichtbar";
 import { lubwLage } from "@/lib/bundeslaender";
 import Link from "next/link";
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import {
@@ -31,8 +32,9 @@ import {
   type BeurteilungsEinstufung,
   stufeKurz,
   stufeText,
+  type LetzteBewertungen,
 } from "@/components/stockkarten-eintrag-felder";
-import { kurzesDatum } from "@/lib/honig";
+import { kgAnzeige, kurzesDatum } from "@/lib/honig";
 import { HERKUNFT_LABEL, anzeigeFarbe, type Herkunft } from "@/lib/koeniginnen";
 import type { FreieKoenigin } from "@/components/koenigin-wahl-beim-anlegen";
 import { KoeniginStern } from "@/components/koenigin-stern";
@@ -99,8 +101,11 @@ type VolkMitLetztemEintrag = {
   beuteFotoZoom: number;
   beuteFotoFokusX: number;
   beuteFotoFokusY: number;
+  // Je Kriterium die letzte Durchsicht, die einen Wert hatte (auch ältere).
+  letzteBewertungen: LetzteBewertungen | null;
   eintraege: {
     datum: Date;
+    gewichtKg: number | null;
     gesamteindruck: number | null;
     volksstaerkeEinschaetzung: number | null;
     futtermengeEinschaetzung: number | null;
@@ -137,6 +142,7 @@ function letzteAktivitaet(eintrag: VolkMitLetztemEintrag["eintraege"][number]): 
     eintrag.verdeckelteBrutGesehen && "verdeckelte Brut",
     eintrag.weiselzellenGesehen && "Weiselzellen",
   ].filter(Boolean);
+  if (eintrag.gewichtKg != null) punkte.push(`Gewicht ${kgAnzeige(eintrag.gewichtKg)} kg`);
   if (eintrag.koeniginGesehen) punkte.push("Königin gesehen");
   if (brutbild.length > 0) punkte.push(`Brutbild: ${brutbild.join(", ")}`);
   if (eintrag.varroaAnzahl !== null || eintrag.varroaZaehlweise) punkte.push("Varroa kontrolliert");
@@ -184,6 +190,54 @@ function bewertung(eintrag: VolkMitLetztemEintrag["eintraege"][number] | undefin
 }
 type BeurteilungsFeldName = (typeof BEURTEILUNGS_KRITERIEN)[number]["feld"];
 
+// Ab so vielen Tagen gilt eine ältere Bewertung als nicht mehr frisch: ihr
+// Datum wird grau markiert.
+const BEWERTUNG_ALT_TAGE = 21;
+
+// Wie bewertung(), aber mit Rückgriff: fehlt der Wert in der letzten
+// Durchsicht (z.B. nur Gewicht oder Notiz erfasst), kommt er aus der
+// letzten Durchsicht, die ihn wirklich enthält. `seit` ist dann deren Datum,
+// `alt` sagt, ob sie mehr als drei Wochen zurückliegt. Gibt es nie einen
+// Wert, kommt null zurück und die Zeile entfällt.
+function bewertungMitRueckgriff(volk: VolkMitLetztemEintrag, feld: BeurteilungsFeldName, heute: Date) {
+  const eintrag = volk.eintraege[0];
+  const aktuell = bewertung(eintrag, feld);
+  if (aktuell) return { ...aktuell, seit: null, alt: false };
+  const frueher = volk.letzteBewertungen?.[feld];
+  if (!frueher) return null;
+  const kriterium = BEURTEILUNGS_KRITERIEN.find((k) => k.feld === feld)!;
+  return {
+    text: `${stufeText(kriterium, frueher.note)} (Durchsicht vom ${kurzesDatum(frueher.datum)})`,
+    kurz: stufeKurz(kriterium, frueher.note),
+    einstufung: kriteriumEinstufung(kriterium, frueher.note),
+    seit: frueher.datum,
+    alt: heute.getTime() - frueher.datum.getTime() > BEWERTUNG_ALT_TAGE * 24 * 60 * 60 * 1000,
+  };
+}
+type BewertungMitRueckgriff = NonNullable<ReturnType<typeof bewertungMitRueckgriff>>;
+
+const tagMonat = (d: Date) => d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
+
+// Kleines Datum hinter einem Wert aus einer früheren Durchsicht. Älter als
+// drei Wochen: grau hinterlegt, damit es auffällt.
+function SeitDatum({ wert }: { wert: BewertungMitRueckgriff }) {
+  if (!wert.seit) return null;
+  return (
+    <span
+      className={`text-xs font-normal whitespace-nowrap text-muted ${wert.alt ? "rounded bg-rand-ruhig/40 px-1" : ""}`}
+      title={wert.alt ? `Älter als ${BEWERTUNG_ALT_TAGE / 7} Wochen` : undefined}
+    >
+      {tagMonat(wert.seit)}
+    </span>
+  );
+}
+
+// Datum der letzten Durchsicht, ggf. mit dem dort erfassten Gewicht.
+function durchsichtText(eintrag: VolkMitLetztemEintrag["eintraege"][number] | undefined) {
+  if (!eintrag) return "–";
+  return eintrag.gewichtKg != null ? `${tagMonat(eintrag.datum)} · ${kgAnzeige(eintrag.gewichtKg)} kg` : tagMonat(eintrag.datum);
+}
+
 const STREIFEN: Record<BeurteilungsEinstufung, string> = { gruen: "bg-ok-voll", gelb: "bg-warnung-voll", rot: "bg-gefahr-voll" };
 
 function VerschiebenKnoepfe({ volk, verschieben }: { volk: VolkMitLetztemEintrag; verschieben: { istErste: boolean; istLetzte: boolean } }) {
@@ -224,11 +278,11 @@ function VolkNeu({
   const eintrag = volk.eintraege[0];
   const farbe = aus.includes("koeniginnen") ? null : anzeigeFarbe(volk.koenigin?.jahrgang, volk.koenigin?.zeichenFarbe);
   const ohneKoenigin = aus.includes("koeniginnen");
-  const staerke = bewertung(eintrag, "volksstaerkeEinschaetzung");
-  const futter = bewertung(eintrag, "futtermengeEinschaetzung");
+  const heute = new Date();
+  const staerke = bewertungMitRueckgriff(volk, "volksstaerkeEinschaetzung", heute);
+  const futter = bewertungMitRueckgriff(volk, "futtermengeEinschaetzung", heute);
   const gesamt = bewertung(eintrag, "gesamteindruck");
   const offene = massnahmenBuendeln(volk.massnahmen);
-  const heute = new Date();
   const naechste = offene[0];
   const naechsteFaellig = naechste ? faelligkeitBestimmen(naechste.faelligAm, heute) : "ohne";
   const ueberfaellig = offene.some((m) => faelligkeitBestimmen(m.faelligAm, heute) === "ueberfaellig");
@@ -276,16 +330,25 @@ function VolkNeu({
             Wort (die allgemeine Regel aus globals.css bricht sonst z.B.
             "Ausreichen/d"), notfalls am Leerzeichen oder Strich. */}
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-1 rounded-lg bg-flaeche px-3 py-2.5 [overflow-wrap:normal]">
-          <dt className="text-sm text-muted">Stärke</dt>
-          <dd title={staerke?.text} className={`font-semibold ${staerke?.einstufung && staerke.einstufung !== "gruen" ? WERTUNG_TEXT[staerke.einstufung] : ""}`}>
-            {staerke?.kurz ?? "–"}
-          </dd>
-          <dt className="text-sm text-muted">Futter</dt>
-          <dd title={futter?.text} className={`font-semibold ${futter?.einstufung && futter.einstufung !== "gruen" ? WERTUNG_TEXT[futter.einstufung] : ""}`}>
-            {futter?.kurz ?? "–"}
-          </dd>
+          {(
+            [
+              ["Stärke", staerke],
+              ["Futter", futter],
+            ] as const
+          ).map(
+            ([titel, wert]) =>
+              wert && (
+                <Fragment key={titel}>
+                  <dt className="text-sm text-muted">{titel}</dt>
+                  <dd title={wert.text} className="flex flex-wrap items-baseline gap-x-2">
+                    <span className={`font-semibold ${wert.einstufung && wert.einstufung !== "gruen" ? WERTUNG_TEXT[wert.einstufung] : ""}`}>{wert.kurz}</span>
+                    <SeitDatum wert={wert} />
+                  </dd>
+                </Fragment>
+              )
+          )}
           <dt className="text-sm text-muted">Durchsicht</dt>
-          <dd className="font-semibold">{eintrag ? datum(eintrag.datum) : "–"}</dd>
+          <dd className="font-semibold">{durchsichtText(eintrag)}</dd>
         </dl>
         {naechsteText && (
           <p className={`flex items-center gap-2 text-sm ${ueberfaellig ? "text-gefahr" : naechsteFaellig === "heute" ? "text-warnung" : ""}`}>
@@ -330,9 +393,29 @@ function VolkNeu({
       </span>
       <span className="text-sm md:order-none">{eintrag?.gesamteindruck != null && <GesamteindruckPlakette wert={eintrag.gesamteindruck} />}</span>
       <span className="col-span-3 flex flex-wrap gap-x-3 pl-9 text-sm md:contents">
-        <span title={staerke?.text} className={`md:pl-0 ${staerke?.einstufung && staerke.einstufung !== "gruen" ? WERTUNG_TEXT[staerke.einstufung] : ""}`}>{staerke?.kurz ?? "–"}</span>
-        <span title={futter?.text} className={futter?.einstufung && futter.einstufung !== "gruen" ? WERTUNG_TEXT[futter.einstufung] : ""}>{futter?.kurz ?? "–"}</span>
-        <span className="klar-mono">{eintrag ? datum(eintrag.datum) : "–"}</span>
+        {[staerke, futter].map((wert, i) => (
+          // Leer bleibt die Zelle stehen (Spalten am PC), am Handy fällt sie weg.
+          <span key={i} title={wert?.text} className="flex flex-wrap items-baseline gap-x-1.5 empty:hidden md:flex-col md:items-start md:pl-0 md:empty:flex">
+            {wert && (
+              <>
+                <span className={wert.einstufung && wert.einstufung !== "gruen" ? WERTUNG_TEXT[wert.einstufung] : ""}>{wert.kurz}</span>
+                <SeitDatum wert={wert} />
+              </>
+            )}
+          </span>
+        ))}
+        {/* Am PC das Gewicht in eine zweite, kleine Zeile, damit die schmale
+            Spalte nicht mitten im Wert umbricht. */}
+        <span className="klar-mono flex flex-wrap items-baseline gap-x-1.5 md:flex-col md:items-start">
+          {eintrag ? (
+            <>
+              <span>{tagMonat(eintrag.datum)}</span>
+              {eintrag.gewichtKg != null && <span className="text-xs text-muted">{kgAnzeige(eintrag.gewichtKg)} kg</span>}
+            </>
+          ) : (
+            "–"
+          )}
+        </span>
       </span>
       <span className="col-span-3 flex items-center gap-2 pl-9 text-sm md:col-span-1 md:pl-0">
         {offene.length > 0 && (
@@ -382,6 +465,15 @@ function VolkVorschau({
 }) {
   const letzterEintrag = volk.eintraege[0];
   const wertungen = letzterEintrag ? wertungenLetzteDurchsicht(letzterEintrag) : [];
+  // Stärke und Futter, die in der letzten Durchsicht fehlen, aus einer
+  // früheren Durchsicht nachtragen (mit deren Datum).
+  const jetzt = new Date();
+  const nachgetragen = (["volksstaerkeEinschaetzung", "futtermengeEinschaetzung"] as const).flatMap((feld) => {
+    const wert = bewertungMitRueckgriff(volk, feld, jetzt);
+    if (!wert?.seit) return [];
+    const label = BEURTEILUNGS_KRITERIEN.find((k) => k.feld === feld)!.label;
+    return [{ schluessel: feld, label, wert }];
+  });
   // Zeichenfarbe der Königin - auf einen Blick erkennbar, welchen Jahrgang
   // das Volk führt, ohne die Kachel zu öffnen.
   const farbe = aus.includes("koeniginnen") ? null : anzeigeFarbe(volk.koenigin?.jahrgang, volk.koenigin?.zeichenFarbe);
@@ -422,13 +514,18 @@ function VolkVorschau({
         </p>
       )}
 
-      {wertungen.length > 0 && (
+      {(wertungen.length > 0 || nachgetragen.length > 0) && (
         <div className="mt-2 rounded-md border border-border bg-background px-2 py-1 text-xs">
-          <p className="font-medium">Bewertung letzte Durchsicht</p>
+          <p className="font-medium">{wertungen.length > 0 ? "Bewertung letzte Durchsicht" : "Letzte Bewertung"}</p>
           <ul className="mt-0.5 list-inside list-disc">
             {wertungen.map((k) => (
               <li key={k.schluessel} className={WERTUNG_TEXT[k.einstufung]}>
                 {k.text}
+              </li>
+            ))}
+            {nachgetragen.map(({ schluessel, label, wert }) => (
+              <li key={schluessel} title={wert.text} className={wert.einstufung ? WERTUNG_TEXT[wert.einstufung] : ""}>
+                {label}: {wert.kurz} <SeitDatum wert={wert} />
               </li>
             ))}
           </ul>
@@ -629,6 +726,7 @@ export default async function BienenstandDetailPage({
             take: 1,
             select: {
               datum: true,
+              gewichtKg: true,
               gesamteindruck: true,
               volksstaerkeEinschaetzung: true,
               futtermengeEinschaetzung: true,
@@ -683,12 +781,18 @@ export default async function BienenstandDetailPage({
   );
   const volkAnlegenMitBienenstand = volkAnlegen.bind(null, bienenstand.id);
   const freieKoeniginnen = ohneZucht ? [] : await freieKoeniginnenLaden();
+  // Je Volk die letzten vorhandenen Bewertungen anhängen (für Stärke und
+  // Futter in der Kachel, wenn die letzte Durchsicht keine hatte).
+  const voelkerMitBewertungen = bienenstand.voelker.map((volk) => ({
+    ...volk,
+    letzteBewertungen: letzteBewertungen.get(volk.id) ?? null,
+  }));
   const aktiveVoelker = sortiereVoelker(
-    bienenstand.voelker.filter((volk) => !volk.archiviert),
+    voelkerMitBewertungen.filter((volk) => !volk.archiviert),
     bienenstand.voelkerSortierung
   );
   const archivierteVoelker = sortiereVoelker(
-    bienenstand.voelker.filter((volk) => volk.archiviert),
+    voelkerMitBewertungen.filter((volk) => volk.archiviert),
     bienenstand.voelkerSortierung
   );
   const nachStandposition = bienenstand.voelkerSortierung === "STANDPOSITION";

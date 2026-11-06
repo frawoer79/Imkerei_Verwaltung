@@ -18,6 +18,7 @@ import { MiniStrahl } from "@/components/mini-strahl";
 import { SeitenNavigation } from "@/components/seiten-navigation";
 import { StandtypBadge } from "@/components/standtyp";
 import { ZahlStepper } from "@/components/zahl-stepper";
+import { VerkaufFelder } from "@/components/verkauf-felder";
 import { BEURTEILUNGS_KRITERIEN, GESAMTEINDRUCK_KRITERIUM } from "@/components/stockkarten-eintrag-felder";
 import { ChipBeispiel, FarbFeld, SchalterBeispiel, SortierBeispiel } from "./beispiele";
 
@@ -235,6 +236,26 @@ export default async function StyleguidePage() {
             </Quelle>
           </div>
           <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button groesse="symbol" variant="primary" aria-label="Bearbeiten" aria-pressed title="Bearbeiten">
+                <Symbole.IconBearbeiten className="h-5 w-5" />
+              </Button>
+              <span className="text-sm text-muted">→</span>
+              <Input type="date" defaultValue="2026-11-14" aria-label="Fällig am" className="min-h-11 w-44" />
+              <Button groesse="symbol" aria-label="Speichern" title="Speichern">
+                <Symbole.IconHaken className="h-5 w-5" />
+              </Button>
+              <Button groesse="symbol" variant="secondary" aria-label="Abbrechen" title="Abbrechen">
+                <span aria-hidden="true">✕</span>
+              </Button>
+            </div>
+            <Quelle>
+              Schmal bearbeiten an Ort und Stelle: Stift aktiv als {'variant="primary" aria-pressed'}, darunter Felder
+              mit ✓ (Speichern) und ✕ (Abbrechen) als Symbol-Knöpfe. Fertig als {"<MassnahmeBearbeitenFormular>"};
+              eine ganze Sammelmaßnahme: {"<SammelMassnahmeBearbeiten>"} mit EntfernChip und PlusChip für die Völker.
+            </Quelle>
+          </div>
+          <div>
             <LinkKnopf href="#knoepfe" variant="secondary">
               Link im Knopf-Aussehen
             </LinkKnopf>
@@ -278,6 +299,13 @@ export default async function StyleguidePage() {
               {"<WahlChip>"} Auswahl als Chip (Sorte, Gebinde, Grund). {"<EntfernChip>"} Eintrag mit × in einer
               Liste (Sorten, Gebinde unter Einstellungen). {"<PlusChip>"} „+ Sorte“, „+ Größe“. Gebinde-Gruppen und
               „+ Größe“-Felder kommen überall aus lib/gebinde.ts und {"<GebindeNeuFelder>"} (gebinde.tsx).
+            </Quelle>
+          </div>
+          <div className="sm:col-span-2">
+            <VerkaufFelder idPrefix="sg-verkauf" vorschlag={13.5} />
+            <Quelle>
+              {"<VerkaufFelder>"} (verkauf-felder.tsx): Erlös und Käufer bei jedem Verkauf (Auslagern, Volk,
+              Königin, Lager → Verkäufe). Vorschlag aus der Preisliste, bis man selbst tippt.
             </Quelle>
           </div>
           <div className="sm:col-span-2">

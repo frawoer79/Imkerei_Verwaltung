@@ -780,8 +780,15 @@ async function anlegen(jetzt: Date) {
             zustand: "GERUEHRT",
             gebindeId: glas500.id,
             anzahl: -20,
-            notizen: "Hofverkauf",
+            erloes: 130,
+            kaeufer: "Hofverkauf",
           },
+        });
+      }
+      // Ein Ableger, der nie als eigenes Volk geführt wurde.
+      if (vergangen(am([7, 5]))) {
+        await prisma.verkauf.create({
+          data: { art: "ABLEGER", datum: am([7, 5]), bezeichnung: "Ableger Carnica", anzahl: 2, preis: 240, kaeufer: "Imkerverein" },
         });
       }
     }

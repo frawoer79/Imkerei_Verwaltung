@@ -23,6 +23,7 @@ export function KoeniginEreignisBearbeitenFormular({
     volkId: string | null;
     notiz: string;
     fotoUrl: string | null;
+    verkauf?: { preis: number | null; kaeufer: string } | null;
   };
   voelker: { id: string; name: string; standName: string }[];
   action: (ereignisId: string, formData: FormData) => Promise<void>;
@@ -66,6 +67,7 @@ export function KoeniginEreignisBearbeitenFormular({
         notiz={notiz}
         onNotizChange={setNotiz}
         voelker={voelker}
+        verkauf={ereignis.verkauf}
       />
 
       <EinzelfotoAuswahl name="foto" label="Foto" bestehendeUrl={ereignis.fotoUrl} entfernenName="fotoEntfernen" />

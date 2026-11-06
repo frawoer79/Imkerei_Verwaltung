@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Card } from "@/components/ui";
 import { MassnahmenUebersicht, type MassnahmeMitVolk } from "@/components/massnahmen-uebersicht";
+import type { VolkWahlStand } from "@/components/sammel-massnahme-bearbeiten";
 import { massnahmenGruppieren } from "@/lib/massnahmen-gruppen";
 
 const MONATE = [
@@ -34,8 +35,11 @@ export function MassnahmenMitKalender({
   offene,
   erledigte,
   heute: heuteServer,
+  staende,
 }: {
   offene: MassnahmeMitVolk[];
+  /// Für "+ Volk" beim Bearbeiten einer Sammelmaßnahme.
+  staende?: VolkWahlStand[];
   /// Nur zum Mitzählen bei Sammelmaßnahmen ("3/9 erledigt").
   erledigte: MassnahmeMitVolk[];
   heute: Date;
@@ -160,7 +164,7 @@ export function MassnahmenMitKalender({
             </button>
           )}
         </div>
-        <MassnahmenUebersicht massnahmen={liste} heute={heuteServer} erledigte={erledigte} />
+        <MassnahmenUebersicht massnahmen={liste} heute={heuteServer} erledigte={erledigte} staende={staende} />
       </div>
 
       <Card className="p-4 sm:p-5 md:max-w-3xl">

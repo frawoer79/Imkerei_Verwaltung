@@ -540,3 +540,18 @@ export function IconSchloss({ className }: IconProps) {
     </svg>
   );
 }
+
+// Preisschild: Verkäufe (Lager -> Verkäufe).
+export function IconVerkauf({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path
+        d="M10.6 3H16a1 1 0 011 1v5.4a1 1 0 01-.3.7l-7 7a1 1 0 01-1.4 0l-5.4-5.4a1 1 0 010-1.4l7-7a1 1 0 01.7-.3Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="13.5" cy="6.5" r="1.3" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  );
+}

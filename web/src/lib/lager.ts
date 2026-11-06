@@ -170,6 +170,9 @@ export type ErzeugnisBuchungAnzeige = {
   volkName: string | null;
   volkId: string | null;
   bienenstandId: string | null;
+  /// Nur bei Verkäufen: Erlös in € (leer = nicht erfasst) und Käufer.
+  erloes: number | null;
+  kaeufer: string | null;
 };
 
 /// Ein Posten im Lager: Bestand gleicher Sorte, Zustand, Gebinde und
@@ -266,6 +269,8 @@ export async function erzeugnisBestandUebersicht(): Promise<ErzeugnisBestand[]> 
           lagerort: { select: { name: true } },
           volkId: true,
           volk: { select: { name: true, bienenstandId: true } },
+          erloes: true,
+          kaeufer: true,
         },
       },
     },
@@ -291,6 +296,8 @@ export async function erzeugnisBestandUebersicht(): Promise<ErzeugnisBestand[]> 
       volkId: buchung.volkId,
       volkName: buchung.volk?.name ?? null,
       bienenstandId: buchung.volk?.bienenstandId ?? null,
+      erloes: buchung.erloes,
+      kaeufer: buchung.kaeufer,
     }));
 
     const gebindeInhalt = new Map(typ.buchungen.map((buchung) => [buchung.gebindeId, buchung.gebinde?.inhalt ?? null]));

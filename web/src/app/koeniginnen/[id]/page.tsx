@@ -134,6 +134,7 @@ export default async function KoeniginPage({ params }: { params: Promise<{ id: s
         orderBy: [{ datum: "desc" }, { createdAt: "desc" }],
         include: {
           volk: { select: { id: true, name: true, bienenstand: { select: { name: true } } } },
+          verkauf: { select: { preis: true, kaeufer: true } },
           // Nur bei art === "BEWERTUNG" gesetzt - die Rohwerte, aus denen sich
           // einzelne Kriterien aus der Königin-Bewertung ausschließen lassen.
           stockkartenEintrag: {
@@ -473,6 +474,7 @@ export default async function KoeniginPage({ params }: { params: Promise<{ id: s
                 volkId: ereignis.volkId,
                 notiz: ereignis.notiz,
                 fotoDateiname: ereignis.fotoDateiname,
+                verkauf: ereignis.verkauf,
                 bewertung: ereignis.stockkartenEintrag
                   ? {
                       stockkartenEintragId: ereignis.stockkartenEintragId!,

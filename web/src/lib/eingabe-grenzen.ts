@@ -90,6 +90,7 @@ export const FELD_GRENZEN: Record<string, number> = {
   benutzer: LAENGE.mail,
   host: LAENGE.mail,
   gewichtKg: 30,
+  kaeufer: LAENGE.zeile,
 };
 
 /// maxLength für ein Eingabefeld; undefined bei Feldern ohne Textlänge
@@ -171,7 +172,8 @@ export const SPALTEN_GRENZEN: Record<string, Record<string, number>> = {
   Erzeugnistyp: { name: LAENGE.name, einheit: LAENGE.kurz },
   Gebinde: { name: LAENGE.name },
   Sorte: { name: LAENGE.name },
-  ErzeugnisBuchung: { notizen: LAENGE.text },
+  ErzeugnisBuchung: { notizen: LAENGE.text, kaeufer: LAENGE.zeile },
+  Verkauf: { kaeufer: LAENGE.zeile, notiz: LAENGE.text },
   Honigraumaufsatz: { bezeichnung: LAENGE.name },
   MailEinstellung: { host: LAENGE.mail, benutzer: LAENGE.mail, absender: LAENGE.mail },
   MailEmpfaenger: { adresse: LAENGE.mail },
