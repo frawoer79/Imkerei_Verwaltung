@@ -84,7 +84,7 @@ export default async function MassnahmenPage() {
         <MassnahmeNeuDialog key={massnahmenRoh.length} staende={staende} />
       </div>
 
-      <MassnahmenMitKalender offene={offene} erledigte={erledigte} heute={heute} />
+      <MassnahmenMitKalender offene={offene} erledigte={erledigte} heute={heute} staende={staende} />
 
       {erledigte.length > 0 && (
         <div className="flex flex-col gap-2">

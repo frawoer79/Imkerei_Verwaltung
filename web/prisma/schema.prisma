@@ -257,6 +257,8 @@ model Volk {
   begatteteKoeniginnen     Koenigin[]           @relation("KoeniginHerkunftsvolk")
   dokumente                DokumentVolk[]
   erzeugnisBuchungen       ErzeugnisBuchung[]
+  /// Gesetzt, solange der Status "verkauft" ist (Preis, Käufer, Datum).
+  verkauf                  Verkauf?
 
   @@index([bienenstandId])
   @@index([klimadeckelId])
@@ -430,6 +432,7 @@ model Koenigin {
   dokumente  Dokument[]
   /// Die erstellte eigene Zuchtkarte - leer, solange keine erstellt wurde.
   zuchtkarte Zuchtkarte?
+  verkaeufe  Verkauf[]
 
   @@index([mutterKoeniginId])
   @@index([zuchtserieId])
@@ -568,6 +571,9 @@ model KoeniginEreignis {
   /// Vom Käfigen oder Bannwabenverfahren angelegt - geht mit dem Verfahren.
   bioVerfahrenId String?
   bioVerfahren   BioVerfahren? @relation(fields: [bioVerfahrenId], references: [id], onDelete: Cascade)
+
+  /// Bei "verkauft": Preis und Käufer stehen im Verkauf.
+  verkauf Verkauf?
 
   createdAt DateTime @default(now())
 
@@ -1395,6 +1401,12 @@ model ErzeugnisBuchung {
   eimerId String?
   eimer   Eimer?  @relation(fields: [eimerId], references: [id], onDelete: SetNull)
 
+  /// Nur bei Abgängen mit Grund "Verkauf": was dafür eingenommen wurde (€,
+  /// für diese Buchung gesamt) und an wen. Leer = nicht erfasst, die
+  /// Verkaufsliste schätzt dann nach der Preisliste.
+  erloes  Float?
+  kaeufer String?
+
   /// Optional: wo diese Menge lagert.
   lagerortId String?
   lagerort   Lagerort? @relation(fields: [lagerortId], references: [id], onDelete: SetNull)
@@ -1418,6 +1430,46 @@ model ErzeugnisBuchung {
   @@index([lagerortId])
   @@index([volkId])
   @@index([stockkartenEintragId])
+}
+
+/// Was verkauft wurde, außer Erzeugnissen aus dem Lager (die stehen als
+/// Abgang mit Grund "Verkauf" in ErzeugnisBuchung).
+enum VerkaufArt {
+  VOLK
+  ABLEGER
+  KOENIGIN
+  SONSTIGES
+}
+
+/// Ein verkauftes Volk, ein Ableger, eine Königin oder Sonstiges. Entsteht
+/// von selbst, wenn ein Volk auf "verkauft" gesetzt wird (volkId) oder eine
+/// Königin das Ereignis "verkauft" bekommt (koeniginEreignisId), oder frei auf
+/// der Seite Lager -> Verkäufe, etwa für einen Ableger, der nie als Volk
+/// geführt wurde. `bezeichnung` hält den Namen fest, damit der Verkauf lesbar
+/// bleibt, auch wenn Volk oder Königin später gelöscht werden.
+model Verkauf {
+  id          String     @id @default(cuid())
+  art         VerkaufArt
+  datum       DateTime
+  bezeichnung String
+  anzahl      Int        @default(1)
+  /// Erlös gesamt in Euro. Leer = nicht erfasst.
+  preis       Float?
+  kaeufer     String?
+  notiz       String?
+
+  volkId             String?           @unique
+  volk               Volk?             @relation(fields: [volkId], references: [id], onDelete: SetNull)
+  koeniginId         String?
+  koenigin           Koenigin?         @relation(fields: [koeniginId], references: [id], onDelete: SetNull)
+  koeniginEreignisId String?           @unique
+  koeniginEreignis   KoeniginEreignis? @relation(fields: [koeniginEreignisId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([datum])
+  @@index([koeniginId])
 }
 
 /// Wie die Waben in einem aufgesetzten Honigraum beschaffen waren.

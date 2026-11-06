@@ -7,6 +7,7 @@ import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { heuteAlsInputWert } from "@/lib/datum";
+import { GLEICHZEITIG_MS } from "@/lib/massnahmen-gruppen";
 import { cookies } from "next/headers";
 import { basisPrisma, prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
@@ -35,6 +36,7 @@ import { KORREKTUR_MAX, KORREKTUR_MIN, runden, zargeBezeichnung } from "@/lib/ho
 import { HONIG_ZUSTAENDE } from "@/lib/honig-zustand";
 import { abfuellenAufteilen, istEimerGebinde, type EimerEinheit } from "@/lib/eimer";
 import { jeStueck } from "@/lib/warenwert";
+import { betragAusText, istVerkaufGrund, VERKAUF_ART_NAME, VERKAUF_ARTEN } from "@/lib/verkauf";
 import { gebindeArt, gebindeNameVoll, gleichesGebinde, istGebindeArt } from "@/lib/gebinde";
 import { BEUTENSYSTEM_KATALOG, EIGNUNGEN, fehlendeKatalogMasse } from "@/lib/beutensysteme";
 import { zargenFuerNeueMasse } from "@/lib/beuten";
@@ -854,8 +856,125 @@ export async function volkStatusAendern(volkId: string, formData: FormData) {
     data: { status: status as VolkStatus },
   });
 
+  // Verkauft: Preis, Käufer und Datum landen in der Verkaufsliste. Wird der
+  // Status zurückgenommen, verschwindet der Verkauf wieder.
+  if (status === "VERKAUFT") {
+    const daten = {
+      art: formData.get("verkaufArt") === "ABLEGER" ? ("ABLEGER" as const) : ("VOLK" as const),
+      datum: datumAusFormular(formData),
+      bezeichnung: volk.name,
+      preis: betragAusText(formData.get("preis")?.toString()),
+      kaeufer: textOderUndefined(formData.get("kaeufer")) ?? null,
+      notiz: textOderUndefined(formData.get("verkaufNotiz")) ?? null,
+    };
+    await prisma.verkauf.upsert({ where: { volkId }, create: { ...daten, volkId }, update: daten });
+  } else {
+    await prisma.verkauf.deleteMany({ where: { volkId } });
+  }
+
   revalidatePath(`/voelker/${volkId}`);
   revalidatePath(`/bienenstaende/${volk.bienenstandId}`);
+  revalidatePath(VERKAEUFE_PFAD);
+}
+
+const VERKAEUFE_PFAD = "/lager/verkaeufe";
+
+/// Hält den Verkauf einer Königin passend zu ihrem Ereignis "verkauft": legt
+/// ihn an oder zieht Datum und Kennung nach, Preis und Käufer nur, wenn das
+/// Formular sie mitschickt. Ist das Ereignis keins (mehr), fällt er weg.
+async function koeniginVerkaufAbgleichen(ereignisId: string, formData?: FormData) {
+  const ereignis = await prisma.koeniginEreignis.findUnique({
+    where: { id: ereignisId },
+    select: { art: true, datum: true, koeniginId: true, notiz: true, koenigin: { select: { kennung: true } } },
+  });
+  if (!ereignis || ereignis.art !== "VERKAUFT") {
+    await prisma.verkauf.deleteMany({ where: { koeniginEreignisId: ereignisId } });
+    revalidatePath(VERKAEUFE_PFAD);
+    return;
+  }
+  const preisFelder =
+    formData && formData.has("preis")
+      ? {
+          preis: betragAusText(formData.get("preis")?.toString()),
+          kaeufer: textOderUndefined(formData.get("kaeufer")) ?? null,
+        }
+      : {};
+  const daten = { datum: ereignis.datum, bezeichnung: ereignis.koenigin.kennung, koeniginId: ereignis.koeniginId, ...preisFelder };
+  await prisma.verkauf.upsert({
+    where: { koeniginEreignisId: ereignisId },
+    create: { ...daten, art: "KOENIGIN", koeniginEreignisId: ereignisId, notiz: ereignis.notiz },
+    update: daten,
+  });
+  revalidatePath(VERKAEUFE_PFAD);
+}
+
+function verkaufAusFormular(formData: FormData) {
+  const art = enumWertOderNull(VERKAUF_ARTEN, formData.get("art"));
+  const anzahlRoh = zahlOderNull(formData.get("anzahl"));
+  return {
+    art,
+    datum: datumAusFormular(formData),
+    bezeichnung: textOderUndefined(formData.get("bezeichnung")) ?? null,
+    anzahl: anzahlRoh === null ? 1 : Math.max(1, Math.round(anzahlRoh)),
+    preis: betragAusText(formData.get("preis")?.toString()),
+    kaeufer: textOderUndefined(formData.get("kaeufer")) ?? null,
+    notiz: textOderUndefined(formData.get("notiz")) ?? null,
+  };
+}
+
+/// Frei erfasster Verkauf (z.B. ein Ableger, der nie als Volk geführt wurde).
+export async function verkaufAnlegen(formData: FormData): Promise<FormularErgebnis> {
+  const { art, bezeichnung, ...rest } = verkaufAusFormular(formData);
+  if (!art) return { fehler: "Bitte wählen, was du verkauft hast." };
+  await prisma.verkauf.create({ data: { ...rest, art, bezeichnung: bezeichnung ?? VERKAUF_ART_NAME[art] } });
+  revalidatePath(VERKAEUFE_PFAD);
+}
+
+/// Verkauf ändern. Bei Volk und Königin bleiben Name und Bezug, wie sie sind;
+/// Volk und Ableger lassen sich gegeneinander tauschen.
+export async function verkaufAendern(verkaufId: string, formData: FormData): Promise<FormularErgebnis> {
+  const bestehend = await prisma.verkauf.findUnique({
+    where: { id: verkaufId },
+    select: { art: true, volkId: true, koeniginEreignisId: true },
+  });
+  if (!bestehend) return { fehler: "Diesen Verkauf gibt es nicht mehr." };
+  const { art, bezeichnung, datum, ...rest } = verkaufAusFormular(formData);
+  const verknuepft = bestehend.volkId !== null || bestehend.koeniginEreignisId !== null;
+  let neueArt = art ?? bestehend.art;
+  if (bestehend.koeniginEreignisId) neueArt = "KOENIGIN";
+  else if (bestehend.volkId && neueArt !== "ABLEGER") neueArt = "VOLK";
+  await prisma.verkauf.update({
+    where: { id: verkaufId },
+    data: { ...rest, datum, art: neueArt, ...(verknuepft || !bezeichnung ? {} : { bezeichnung }) },
+  });
+  // Das Datum gehört bei der Königin zum Ereignis im Lebenslauf.
+  if (bestehend.koeniginEreignisId) {
+    await prisma.koeniginEreignis.update({ where: { id: bestehend.koeniginEreignisId }, data: { datum } });
+  }
+  revalidatePath(VERKAEUFE_PFAD);
+}
+
+/// Löschen nur bei frei erfassten Verkäufen. Volk und Königin gehen über
+/// ihren Status bzw. ihr Ereignis, damit beides zusammenpasst.
+export async function verkaufLoeschen(verkaufId: string) {
+  await prisma.verkauf.deleteMany({ where: { id: verkaufId, volkId: null, koeniginEreignisId: null } });
+  revalidatePath(VERKAEUFE_PFAD);
+}
+
+/// Erlös, Käufer, Datum und Notiz eines Lager-Verkaufs nachtragen oder ändern.
+export async function erzeugnisVerkaufAendern(buchungId: string, formData: FormData): Promise<FormularErgebnis> {
+  const buchung = await prisma.erzeugnisBuchung.findUnique({ where: { id: buchungId }, select: { id: true } });
+  if (!buchung) return { fehler: "Diese Buchung gibt es nicht mehr." };
+  await prisma.erzeugnisBuchung.update({
+    where: { id: buchungId },
+    data: {
+      erloes: betragAusText(formData.get("preis")?.toString()),
+      kaeufer: textOderUndefined(formData.get("kaeufer")) ?? null,
+      notizen: textOderUndefined(formData.get("notiz")) ?? null,
+      datum: datumAusFormular(formData),
+    },
+  });
+  revalidatePath(LAGER_PFAD, "layout");
 }
 
 // Zieht ein Volk komplett zu einem anderen, bestehenden Bienenstand um. Die
@@ -1441,9 +1560,10 @@ export async function koeniginEreignisHinzufuegen(koeniginId: string, formData: 
     return;
   }
 
-  await prisma.koeniginEreignis.create({
+  const neu = await prisma.koeniginEreignis.create({
     data: { koeniginId, datum, art: art as EreignisArt, volkId, notiz, ...(await ereignisFotoAusFormular(formData)) },
   });
+  if (art === "VERKAUFT") await koeniginVerkaufAbgleichen(neu.id, formData);
 
   const neuerStatus = statusNachEreignis(art as EreignisArt);
   if (neuerStatus) {
@@ -1631,6 +1751,7 @@ export async function koeniginEreignisAktualisieren(ereignisId: string, formData
     where: { id: ereignisId },
     data: { datum, art: art as EreignisArt, volkId, notiz, ...fotoFelder },
   });
+  await koeniginVerkaufAbgleichen(ereignisId, formData);
 
   await koeniginStatusVolkNeuBerechnen(bestehend.koeniginId);
   await koeniginPfadeNeuLaden(bestehend.koeniginId);
@@ -1641,7 +1762,9 @@ export async function koeniginEreignisLoeschen(ereignisId: string) {
     where: { id: ereignisId },
     select: { koeniginId: true, fotoDateiname: true },
   });
+  await prisma.verkauf.deleteMany({ where: { koeniginEreignisId: ereignisId } });
   await prisma.koeniginEreignis.delete({ where: { id: ereignisId } });
+  revalidatePath(VERKAEUFE_PFAD);
   if (ereignis.fotoDateiname) await bildDateiLoeschen(ereignis.fotoDateiname);
   await koeniginStatusVolkNeuBerechnen(ereignis.koeniginId);
   await koeniginPfadeNeuLaden(ereignis.koeniginId);
@@ -1715,7 +1838,7 @@ export async function koeniginUmweiseln(volkId: string, formData: FormData): Pro
       where: { id: volk.koeniginId },
       data: { status: statusNachEreignis(wahl.art) ?? "RESERVE" },
     });
-    await prisma.koeniginEreignis.create({
+    const ereignis = await prisma.koeniginEreignis.create({
       data: {
         koeniginId: volk.koeniginId,
         datum,
@@ -1724,6 +1847,7 @@ export async function koeniginUmweiseln(volkId: string, formData: FormData): Pro
         notiz: `${wahl.notiz}, ersetzt durch ${neue.kennung}`,
       },
     });
+    if (wahl.art === "VERKAUFT") await koeniginVerkaufAbgleichen(ereignis.id);
     await koeniginPfadeNeuLaden(volk.koeniginId);
   }
 
@@ -2860,6 +2984,75 @@ export async function massnahmeAktualisieren(massnahmeId: string, formData: Form
   await massnahmenPfadeNeuLaden(massnahme.volkId, massnahme.stockkartenEintragId);
 }
 
+/// Eine Sammelmaßnahme (ein Rutsch für mehrere Völker, siehe
+/// lib/massnahmen-gruppen.ts) als Ganzes ändern: Text und Termin für alle,
+/// dazu Völker herausnehmen oder ergänzen. Gesucht wird der ganze Rutsch auf
+/// dem Server, auch die schon erledigten Völker: Sie bekommen Text und Termin
+/// mit, damit die Gruppe zusammenbleibt ("3/9 erledigt"). Herausgenommen
+/// werden nur offene Völker. Neue Völker bekommen die Anlegezeit des Rutsches,
+/// damit sie zur Gruppe gehören.
+export async function sammelMassnahmeAktualisieren(massnahmeId: string, formData: FormData): Promise<{ fehler?: string }> {
+  const text = textOderUndefined(formData.get("text"));
+  if (!text) return { fehler: "Der Text der Maßnahme darf nicht leer sein." };
+  const faelligAmRoh = textOderUndefined(formData.get("faelligAm"));
+  const faelligAm = faelligAmRoh ? new Date(faelligAmRoh) : null;
+  const gewuenschteVolkIds = new Set(formData.getAll("volkIds").map(String));
+  if (gewuenschteVolkIds.size === 0) return { fehler: "Mindestens ein Volk muss bleiben." };
+
+  const bezug = await prisma.massnahme.findUnique({
+    where: { id: massnahmeId },
+    select: { text: true, faelligAm: true, createdAt: true, zuchtserieId: true, bioVerfahrenId: true },
+  });
+  if (!bezug) return { fehler: "Die Maßnahme gibt es nicht mehr." };
+  if (bezug.zuchtserieId || bezug.bioVerfahrenId) return { fehler: "Zucht- und Verfahrensschritte gehören nicht zu einer Sammelmaßnahme." };
+
+  const rutsch = await prisma.massnahme.findMany({
+    where: {
+      text: bezug.text,
+      faelligAm: bezug.faelligAm,
+      zuchtserieId: null,
+      bioVerfahrenId: null,
+      createdAt: {
+        gte: new Date(bezug.createdAt.getTime() - GLEICHZEITIG_MS),
+        lte: new Date(bezug.createdAt.getTime() + GLEICHZEITIG_MS),
+      },
+    },
+    select: { id: true, volkId: true, erledigt: true },
+  });
+
+  const entfernen = rutsch.filter((massnahme) => !massnahme.erledigt && !gewuenschteVolkIds.has(massnahme.volkId));
+  const bleiben = rutsch.filter((massnahme) => !entfernen.includes(massnahme));
+  const vorhanden = new Set(rutsch.map((massnahme) => massnahme.volkId));
+  const neueVolkIds = (
+    await prisma.volk.findMany({
+      where: { id: { in: [...gewuenschteVolkIds].filter((volkId) => !vorhanden.has(volkId)) } },
+      select: { id: true },
+    })
+  ).map((volk) => volk.id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.massnahme.deleteMany({ where: { id: { in: entfernen.map((massnahme) => massnahme.id) } } });
+    await tx.massnahme.updateMany({
+      where: { id: { in: bleiben.map((massnahme) => massnahme.id) } },
+      data: { text, faelligAm },
+    });
+    await tx.massnahme.createMany({
+      data: neueVolkIds.map((volkId) => ({ volkId, text, faelligAm, createdAt: bezug.createdAt })),
+    });
+  });
+
+  const betroffeneVoelker = await prisma.volk.findMany({
+    where: { id: { in: [...new Set([...rutsch.map((massnahme) => massnahme.volkId), ...neueVolkIds])] } },
+    select: { id: true, bienenstandId: true },
+  });
+  for (const volk of betroffeneVoelker) revalidatePath(`/voelker/${volk.id}`);
+  for (const bienenstandId of new Set(betroffeneVoelker.map((volk) => volk.bienenstandId))) {
+    revalidatePath(`/bienenstaende/${bienenstandId}`);
+  }
+  revalidatePath("/massnahmen");
+  return {};
+}
+
 export async function massnahmeUmschalten(massnahmeId: string) {
   const massnahme = await prisma.massnahme.findUniqueOrThrow({
     where: { id: massnahmeId },
@@ -2902,6 +3095,18 @@ export async function massnahmeLoeschen(massnahmeId: string) {
   await prisma.massnahme.delete({ where: { id: massnahmeId } });
 
   await massnahmenPfadeNeuLaden(massnahme.volkId, massnahme.stockkartenEintragId);
+}
+
+/// Alle offenen Völker einer Sammelmaßnahme auf einmal löschen.
+export async function massnahmenLoeschen(massnahmeIds: string[]) {
+  const massnahmen = await prisma.massnahme.findMany({
+    where: { id: { in: massnahmeIds } },
+    select: { volkId: true, stockkartenEintragId: true },
+  });
+  await prisma.massnahme.deleteMany({ where: { id: { in: massnahmeIds } } });
+  for (const massnahme of massnahmen) {
+    await massnahmenPfadeNeuLaden(massnahme.volkId, massnahme.stockkartenEintragId);
+  }
 }
 
 // --- Betriebsstammdaten ------------------------------------------------------
@@ -4074,12 +4279,16 @@ export async function erzeugnisAuslagern(formData: FormData): Promise<{ fehler: 
   const posten = postenAusFormular(formData);
   if (!posten) return { fehler: "Dieser Posten wurde nicht gefunden." };
   const bestand = await postenBestand(posten);
+  const grund = textOderUndefined(formData.get("grund")) ?? null;
+  const verkauf = istVerkaufGrund(grund);
   const basis = {
     ...posten,
     datum: datumAusFormular(formData),
-    grund: textOderUndefined(formData.get("grund")) ?? null,
+    grund,
     notizen: textOderUndefined(formData.get("notizen")) ?? null,
+    kaeufer: verkauf ? (textOderUndefined(formData.get("kaeufer")) ?? null) : null,
   };
+  const erloes = verkauf ? betragAusText(formData.get("preis")?.toString()) : null;
 
   if (posten.gebindeId) {
     const gebinde = await prisma.gebinde.findUnique({ where: { id: posten.gebindeId }, select: { inhalt: true } });
@@ -4095,17 +4304,36 @@ export async function erzeugnisAuslagern(formData: FormData): Promise<{ fehler: 
       }
       einheiten = einheiten.slice(0, Math.round(anzahlRoh));
     }
-    await prisma.erzeugnisBuchung.createManyAndReturn({ data: eimerAbgaenge(einheiten, basis) });
+    await prisma.erzeugnisBuchung.createManyAndReturn({ data: erloesVerteilen(eimerAbgaenge(einheiten, basis), erloes) });
   } else {
     const mengeRoh = zahlOderNull(formData.get("menge"));
     if (mengeRoh === null || mengeRoh <= 0) return { fehler: "Die Menge muss größer als 0 sein." };
     if (mengeRoh > bestand.menge + 0.0005) {
       return { fehler: `Es sind nur noch ${aufGramm(Math.max(bestand.menge, 0)).toLocaleString("de-DE")} auf Lager.` };
     }
-    await prisma.erzeugnisBuchung.create({ data: { ...basis, anzahl: null, menge: -aufGramm(mengeRoh) } });
+    await prisma.erzeugnisBuchung.create({ data: { ...basis, anzahl: null, menge: -aufGramm(mengeRoh), erloes } });
   }
 
   revalidatePath(LAGER_PFAD, "layout");
+}
+
+// Erlös auf mehrere Buchungen eines Verkaufs (einzeln geführte Eimer) nach
+// Gewicht aufteilen, der Rundungsrest landet bei der letzten.
+function erloesVerteilen(
+  buchungen: Prisma.ErzeugnisBuchungCreateManyInput[],
+  erloes: number | null,
+): Prisma.ErzeugnisBuchungCreateManyInput[] {
+  if (erloes === null || buchungen.length === 0) return buchungen;
+  const gesamt = buchungen.reduce((summe, buchung) => summe + Math.abs(buchung.menge), 0);
+  let verteilt = 0;
+  return buchungen.map((buchung, index) => {
+    const anteil =
+      index === buchungen.length - 1
+        ? Math.round((erloes - verteilt) * 100) / 100
+        : Math.round((gesamt > 0 ? (erloes * Math.abs(buchung.menge)) / gesamt : erloes / buchungen.length) * 100) / 100;
+    verteilt += anteil;
+    return { ...buchung, erloes: anteil };
+  });
 }
 
 // Abfüllen in einem Schritt: aus einem Posten (z.B. Eimer 25 kg) in kleinere

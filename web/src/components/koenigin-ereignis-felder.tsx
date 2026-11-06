@@ -1,6 +1,7 @@
 "use client";
 
 import { Input, Label, Select } from "@/components/ui";
+import { VerkaufFelder } from "@/components/verkauf-felder";
 import { EREIGNIS_ARTEN, EREIGNIS_LABEL, EREIGNIS_MIT_VOLK, type EreignisArt } from "@/lib/koeniginnen";
 
 // Die Felder einer Lebenslauf-Station - identisch beim Eintragen und beim
@@ -18,6 +19,7 @@ export function KoeniginEreignisFelder({
   notiz,
   onNotizChange,
   voelker,
+  verkauf = null,
 }: {
   idPraefix: string;
   art: EreignisArt;
@@ -29,6 +31,8 @@ export function KoeniginEreignisFelder({
   notiz: string;
   onNotizChange: (wert: string) => void;
   voelker: { id: string; name: string; standName: string }[];
+  /// Beim Bearbeiten eines Verkaufs: was schon erfasst ist.
+  verkauf?: { preis: number | null; kaeufer: string } | null;
 }) {
   const brauchtVolk = EREIGNIS_MIT_VOLK.includes(art);
 
@@ -83,13 +87,16 @@ export function KoeniginEreignisFelder({
         </div>
       )}
 
+      {art === "VERKAUFT" && (
+        <VerkaufFelder idPrefix={`${idPraefix}-verkauf`} preis={verkauf?.preis ?? null} kaeufer={verkauf?.kaeufer ?? ""} />
+      )}
+
       <div>
         <Label htmlFor={`${idPraefix}-notiz`}>Bemerkung</Label>
         <Input
           id={`${idPraefix}-notiz`}
           value={notiz}
           onChange={(event) => onNotizChange(event.target.value)}
-          placeholder={art === "VERKAUFT" ? "an wen, zu welchem Preis" : ""}
         />
       </div>
     </>

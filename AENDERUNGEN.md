@@ -14,6 +14,16 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## 1.1.0
+
+- Neue Seite Lager → Verkäufe: alles Verkaufte auf einen Blick, mit Erlös, Käufer, Suche und Jahresfilter.
+- Beim Auslagern mit Grund "Verkauf" lassen sich Erlös und Käufer eintragen. Ohne Erlös schätzt die App nach der Preisliste.
+- Verkaufte Völker, Ableger und Königinnen erscheinen ebenfalls in der Verkaufsliste. Schon verkaufte Völker und Königinnen werden beim Update nachgetragen.
+- Unter dem Warenwert steht, was im laufenden Jahr verkauft wurde (kg, Gebinde, Euro).
+- Sammelmaßnahmen lassen sich als Ganzes bearbeiten. Auf der Seite eines Volks gibt es dafür einen Stift.
+- Die Volkskachel zeigt Stärke und Futter aus der letzten Durchsicht, mit Datum. Werte älter als drei Wochen sind grau hinterlegt.
+- Das Update erweitert die Datenbank um die Verkäufe. Vorhandene Daten bleiben erhalten, vorher wird wie immer eine Sicherung angelegt.
+
 ## 1.0.1
 
 - Testzugänge und Styleguide sind Werkzeuge für die Entwicklung. Sie erscheinen bei selbst installierten Instanzen nicht mehr in den Einstellungen.

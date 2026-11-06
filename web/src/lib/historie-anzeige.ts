@@ -22,6 +22,7 @@ export const MODELL_NAMEN: Record<string, string> = {
   medikament: "Medikament",
   medikamentBeleg: "Medikament-Beleg",
   erzeugnisBuchung: "Lagerbuchung",
+  verkauf: "Verkauf",
   eimer: "Eimer",
   materialartikel: "Material",
   honigraumaufsatz: "Honigraum",

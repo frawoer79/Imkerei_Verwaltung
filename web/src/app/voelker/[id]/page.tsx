@@ -49,7 +49,7 @@ import {
   verfahrenTitel,
 } from "@/lib/bio-verfahren";
 import { beutenStammdatenLaden } from "@/lib/beuten";
-import { jetztAlsInputWert } from "@/lib/datum";
+import { datumAlsInputWert, jetztAlsInputWert } from "@/lib/datum";
 import { VolkUmzugDialog } from "@/components/volk-umzug-dialog";
 import {
   brutraumBezeichnung,
@@ -67,6 +67,7 @@ import { AMPEL_TEXT, EINSTUFUNG_AMPEL } from "@/lib/ampel";
 import { MiniStrahl } from "@/components/mini-strahl";
 import { AmpelSymbol } from "@/components/ampel-symbol";
 import { massnahmenBuendeln } from "@/lib/massnahmen-buendeln";
+import { gleicherRutsch } from "@/lib/massnahmen-gruppen";
 import { faelligkeitBestimmen } from "@/lib/faelligkeit";
 
 const STATUS_OPTIONEN = [
@@ -254,6 +255,7 @@ export default async function VolkDetailPage({
     where: { id },
     include: {
       bienenstand: true,
+      verkauf: { select: { art: true, datum: true, preis: true, kaeufer: true, updatedAt: true } },
       koenigin: {
         include: {
           belegstelle: { select: { name: true } },
@@ -395,10 +397,38 @@ export default async function VolkDetailPage({
         zuchtserieId: true,
         bioVerfahrenId: true,
         bioSchritt: true,
+        createdAt: true,
         bioVerfahren: { select: { art: true, verbleib: true, fangwabe: true, bannwabeVariante: true } },
       },
     }),
   ]);
+  // Andere Völker derselben Sammelmaßnahme (gleicher Text, Termin und
+  // Anlegezeit, lib/massnahmen-gruppen.ts) für den Hinweis beim Bearbeiten.
+  const loseOffene = offeneMassnahmenRoh.filter((massnahme) => !massnahme.zuchtserieId && !massnahme.bioVerfahrenId);
+  const geschwister =
+    loseOffene.length === 0
+      ? []
+      : await prisma.massnahme.findMany({
+          where: {
+            volkId: { not: volk.id },
+            zuchtserieId: null,
+            bioVerfahrenId: null,
+            text: { in: loseOffene.map((massnahme) => massnahme.text) },
+          },
+          select: { text: true, faelligAm: true, createdAt: true, volk: { select: { name: true } } },
+        });
+  const sammelNachbarn = (massnahme: (typeof offeneMassnahmenRoh)[number]) =>
+    massnahme.zuchtserieId || massnahme.bioVerfahrenId
+      ? []
+      : geschwister
+          .filter((andere) =>
+            gleicherRutsch(
+              { ...andere, zuchtserie: null },
+              { text: massnahme.text, faelligAm: massnahme.faelligAm, createdAt: massnahme.createdAt, zuchtserie: null }
+            )
+          )
+          .map((andere) => andere.volk.name)
+          .sort(new Intl.Collator("de", { numeric: true }).compare);
   // Von einer Zuchtserie nur der nächste Schritt, ohne Königinnen gar keiner.
   // Verfahrensschritte nur mit dem nächsten Termin; ein Medikamenten-Schritt
   // bekommt den Weg ins Behandlungsformular mit.
@@ -416,6 +446,7 @@ export default async function VolkDetailPage({
       );
     return {
       ...massnahme,
+      auchBei: sammelNachbarn(massnahme),
       link: schritt?.medikament
         ? { href: behandlungLink(massnahme.bioVerfahrenId!, schritt.schluessel, volk.id), text: "Behandlung eintragen" }
         : undefined,
@@ -643,7 +674,22 @@ export default async function VolkDetailPage({
             action={umziehenFuerVolk}
           />
           {!aus.includes("scannen") && <VolkQrCode volkId={volk.id} wert={volk.qrCodeWert} />}
-          <VolkStatusDialog key={volk.status} status={volk.status} optionen={STATUS_OPTIONEN} action={statusAendernFuerVolk} />
+          <VolkStatusDialog
+            key={`${volk.status}-${volk.verkauf?.updatedAt.getTime() ?? ""}`}
+            status={volk.status}
+            optionen={STATUS_OPTIONEN}
+            action={statusAendernFuerVolk}
+            verkauf={
+              volk.verkauf
+                ? {
+                    art: volk.verkauf.art === "ABLEGER" ? "ABLEGER" : "VOLK",
+                    datum: datumAlsInputWert(volk.verkauf.datum),
+                    preis: volk.verkauf.preis,
+                    kaeufer: volk.verkauf.kaeufer ?? "",
+                  }
+                : null
+            }
+          />
         </div>
       </div>
 

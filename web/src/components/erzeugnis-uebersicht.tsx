@@ -9,6 +9,8 @@ import { GEBINDE_ART_NAME, gebindeArt, gebindeGruppen, gebindeNameVoll, groesseK
 import { euro, jeStueck, postenWert, preisFeld, preisFuer, wertSumme } from "@/lib/warenwert";
 import { bestaetigen } from "@/lib/bestaetigen";
 import { LagerortAuswahl } from "@/components/lagerort-auswahl";
+import { VerkaufFelder } from "@/components/verkauf-felder";
+import { buchungErloes, istVerkaufBuchung } from "@/lib/verkauf";
 import { FormularFehler, SicheresFormular, SpeichernKnopf, type AktionsErgebnis } from "@/components/sicheres-formular";
 import { kurzesDatum, runden } from "@/lib/honig";
 import { HONIG_ZUSTAENDE, sorteMitZustand, zustandText } from "@/lib/honig-zustand";
@@ -462,12 +464,14 @@ function AuslagernDialog({
   auslagern,
   abfuellen,
   schliessen,
+  warenwert = false,
 }: {
   typ: ErzeugnisBestand;
   posten: ErzeugnisBestandGruppe;
   auslagern: BuchungsAktion;
   abfuellen: BuchungsAktion;
   schliessen: () => void;
+  warenwert?: boolean;
 }) {
   const mitGebinde = posten.gebindeId !== null;
   const bestandStueck = Math.max(posten.anzahl ?? 0, 0);
@@ -516,6 +520,16 @@ function AuslagernDialog({
   const [restWahl, setRestWahl] = useState<"eimer" | "gewicht" | "schwund">("eimer");
   const restArt = restWahl === "eimer" && !angebrochen?.eimerId ? "gewicht" : restWahl;
   const einzelnZuViel = einzeln && istAbfuellen && aufteilung.fehlt > 0;
+
+  // Verkauf: Erlös vorschlagen, wenn die Preisliste einen Preis kennt.
+  const istVerkauf = grund === "Verkauf";
+  const verkaufMenge = einzeln ? gewaehltMenge : mitGebinde ? aufGramm(anzahl * (posten.gebindeInhalt ?? 0)) : menge || 0;
+  const verkaufStueck = einzeln ? einheiten.length : mitGebinde ? anzahl : null;
+  const erloesVorschlag =
+    warenwert && istVerkauf && verkaufMenge > 0
+      ? (postenWert({ sorteId: posten.sorteId, gebindeId: posten.gebindeId, anzahl: verkaufStueck, menge: verkaufMenge }, typ)
+          ?.wert ?? null)
+      : null;
 
   let hinweis: string;
   let knopf: string;
@@ -647,6 +661,8 @@ function AuslagernDialog({
         setWahl={setGrund}
         zusatz={abfuellenMoeglich ? { wert: ABFUELLEN, text: "Abfüllen" } : undefined}
       />
+
+      {istVerkauf && <VerkaufFelder idPrefix="auslagern" vorschlag={erloesVorschlag} />}
 
       {istAbfuellen && (
         <div className="flex flex-col gap-3">
@@ -1294,24 +1310,85 @@ function gruppenWert(gruppe: PostenGruppe, typ: ErzeugnisBestand): string {
   return summe.ohnePreis === gruppe.posten.length ? "" : ` · ${euro(summe.wert)}`;
 }
 
-// Warenwert unter der Postenliste: dieses Erzeugnis und alle zusammen.
-function WarenwertSumme({ typ, erzeugnisse }: { typ: ErzeugnisBestand; erzeugnisse: ErzeugnisBestand[] }) {
+// Verkäufe dieses Erzeugnisses im laufenden Jahr: Menge, Gebinde, Erlös.
+// Fehlt bei älteren Verkäufen der Erlös, wird er nach der Preisliste
+// geschätzt (dann mit "≈").
+function verkauftImJahr(typ: ErzeugnisBestand, jahr: number) {
+  const verkaeufe = typ.buchungen.filter(
+    (buchung) => istVerkaufBuchung(buchung) && new Date(buchung.datum).getFullYear() === jahr,
+  );
+  let menge = 0;
+  let gebinde = 0;
+  let erloes = 0;
+  let mitErloes = false;
+  let geschaetzt = false;
+  for (const buchung of verkaeufe) {
+    menge += Math.abs(buchung.menge);
+    if (buchung.gebindeId && buchung.anzahl !== null) gebinde += Math.abs(buchung.anzahl);
+    const betrag = buchungErloes(buchung, typ);
+    if (betrag.wert !== null) {
+      erloes += betrag.wert;
+      mitErloes = true;
+      if (betrag.geschaetzt) geschaetzt = true;
+    }
+  }
+  return { anzahl: verkaeufe.length, menge: aufGramm(menge), gebinde, erloes: Math.round(erloes * 100) / 100, mitErloes, geschaetzt };
+}
+
+// Unter der Postenliste: Warenwert (wenn eingeschaltet) dieses Erzeugnisses
+// und aller zusammen, darunter was davon dieses Jahr verkauft wurde.
+function WarenwertSumme({
+  typ,
+  erzeugnisse,
+  warenwert,
+}: {
+  typ: ErzeugnisBestand;
+  erzeugnisse: ErzeugnisBestand[];
+  warenwert: boolean;
+}) {
   const dieses = wertSumme(typ.posten, typ);
   const alle = erzeugnisse.reduce((summe, eintrag) => summe + wertSumme(eintrag.posten, eintrag).wert, 0);
-  if (typ.posten.length === 0 && alle === 0) return null;
+  const jahr = new Date().getFullYear();
+  const verkauft = verkauftImJahr(typ, jahr);
+  const zeigeWert = warenwert && !(typ.posten.length === 0 && alle === 0);
+  if (!zeigeWert && verkauft.anzahl === 0) return null;
+  const verkauftTeile = [
+    `${mengeAnzeige(verkauft.menge, typ.einheit)} ${typ.einheit}`,
+    verkauft.gebinde > 0 ? `${verkauft.gebinde} Gebinde` : null,
+  ].filter(Boolean);
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-border bg-card px-4 py-3 text-sm">
-      <p className="flex items-baseline justify-between gap-3">
-        <span>Warenwert {typ.name}</span>
-        <span className="font-semibold tabular-nums">{euro(dieses.wert)}</span>
-      </p>
-      {erzeugnisse.length > 1 && (
-        <p className="flex items-baseline justify-between gap-3 text-muted">
-          <span>Alle Erzeugnisse</span>
-          <span className="font-semibold tabular-nums text-foreground">{euro(alle)}</span>
-        </p>
+      {zeigeWert && (
+        <>
+          <p className="flex items-baseline justify-between gap-3">
+            <span>Warenwert {typ.name}</span>
+            <span className="font-semibold tabular-nums">{euro(dieses.wert)}</span>
+          </p>
+          {erzeugnisse.length > 1 && (
+            <p className="flex items-baseline justify-between gap-3 text-muted">
+              <span>Alle Erzeugnisse</span>
+              <span className="font-semibold tabular-nums text-foreground">{euro(alle)}</span>
+            </p>
+          )}
+        </>
       )}
-      {dieses.ohnePreis > 0 && (
+      {verkauft.anzahl > 0 && (
+        <div className={zeigeWert ? "mt-1 border-t border-border pt-2" : ""}>
+          <p className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span>Verkauft {jahr}</span>
+            <span className="font-semibold tabular-nums">
+              {verkauft.mitErloes ? `${verkauft.geschaetzt ? "≈ " : ""}${euro(verkauft.erloes)}` : "ohne Erlös"}
+            </span>
+          </p>
+          <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-muted">
+            <span className="tabular-nums">{verkauftTeile.join(" · ")}</span>
+            <Link href="/lager/verkaeufe" className="min-h-8 text-accent hover:underline">
+              Alle Verkäufe
+            </Link>
+          </p>
+        </div>
+      )}
+      {zeigeWert && dieses.ohnePreis > 0 && (
         <p className="text-xs text-muted">
           {dieses.ohnePreis === 1 ? "1 Posten hat" : `${dieses.ohnePreis} Posten haben`} keinen Preis und{" "}
           {dieses.ohnePreis === 1 ? "zählt" : "zählen"} nicht mit. Preise trägst du unter{" "}
@@ -1599,7 +1676,7 @@ export function ErzeugnisUebersicht({
             postenListe(typ)
           )}
 
-          {warenwert && <WarenwertSumme typ={typ} erzeugnisse={erzeugnisse} />}
+          <WarenwertSumme typ={typ} erzeugnisse={erzeugnisse} warenwert={warenwert} />
 
           <LetzteBuchungen erzeugnistyp={typ} loeschen={buchungLoeschen} />
 
@@ -1644,7 +1721,7 @@ export function ErzeugnisUebersicht({
           symbol={auszulagern ? <SymbolKachel name={auszulagern.gebindeName} /> : undefined}
         >
           {auszulagern && (
-            <AuslagernDialog typ={typ} posten={auszulagern} auslagern={auslagern} abfuellen={abfuellen} schliessen={schliessen} />
+            <AuslagernDialog typ={typ} posten={auszulagern} auslagern={auslagern} abfuellen={abfuellen} schliessen={schliessen} warenwert={warenwert} />
           )}
         </LagerDialog>
       )}

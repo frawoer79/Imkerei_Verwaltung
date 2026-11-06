@@ -8,6 +8,7 @@ import { useAbhaken, useWartendeHaken } from "@/lib/use-abhaken";
 import { LoeschenButton } from "@/components/loeschen-button";
 import { MassnahmeFelder } from "@/components/massnahme-felder";
 import { MassnahmeBearbeitenFormular } from "@/components/massnahme-bearbeiten-formular";
+import { IconBearbeiten, IconMuelleimer } from "@/components/icons";
 import {
   FAELLIGKEIT_KAERTCHEN,
   FAELLIGKEIT_PLAKETTE,
@@ -27,6 +28,12 @@ export type MassnahmeWert = {
   /// Weiterführender Knopf, z.B. "Behandlung eintragen" beim
   /// Medikamenten-Schritt eines biotechnischen Verfahrens.
   link?: { href: string; text: string };
+  /// Zucht- und Verfahrensschritte werden bei ihrer Serie bzw. ihrem
+  /// Verfahren geändert, nicht hier.
+  zuchtserieId?: string | null;
+  bioVerfahrenId?: string | null;
+  /// Andere Völker derselben Sammelmaßnahme (Hinweis beim Bearbeiten).
+  auchBei?: string[];
 };
 
 function datumAnzeige(datum: Date): string {
@@ -49,8 +56,8 @@ export function MassnahmenListe({
   stockkartenEintragId?: string;
   massnahmen: MassnahmeWert[];
   heute: Date;
-  /// Nur Haken, Text und Termin - ohne Bearbeiten und Löschen (für die
-  /// Karte "Offene Maßnahmen" oben auf der Volk-Seite).
+  /// Offene als Kärtchen mit Stift (Karte "Offene Maßnahmen" oben auf der
+  /// Volk-Seite), Löschen erst im aufgeklappten Formular.
   kompakt?: boolean;
 }) {
   const [bearbeiteId, setBearbeiteId] = useState<string | null>(null);
@@ -75,17 +82,25 @@ export function MassnahmenListe({
           : faelligkeitBestimmen(massnahme.faelligAm, heute);
         // Kompakt (Karte oben auf der Volk-Seite) wie auf der Maßnahmen-Seite:
         // weißes Kärtchen mit Farbleiste und Termin-Plakette.
-        const kaertchen = kompakt && !massnahme.erledigt;
+        if (kompakt) {
+          return (
+            <KompaktKaertchen
+              key={massnahme.id}
+              massnahme={massnahme}
+              heute={heute}
+              wartet={haken.has(massnahme.id)}
+              bearbeiten={bearbeiteId === massnahme.id}
+              setBearbeiten={(an) => setBearbeiteId(an ? massnahme.id : null)}
+              abhaken={() => void abhaken([{ ...massnahme, volkId }], !massnahme.erledigt)}
+            />
+          );
+        }
         return (
         <div
           key={massnahme.id}
-          className={
-            kaertchen
-              ? `flex items-center gap-3 px-3 py-3 ${KAERTCHEN_BASIS} ${FAELLIGKEIT_KAERTCHEN[faelligkeit]}`
-              : `flex flex-wrap items-start gap-3 rounded-md border px-3 py-2 ${
-                  massnahme.erledigt ? "border-border bg-background" : FAELLIGKEIT_RAHMEN[faelligkeit]
-                }`
-          }
+          className={`flex flex-wrap items-start gap-3 rounded-md border px-3 py-2 ${
+            massnahme.erledigt ? "border-border bg-background" : FAELLIGKEIT_RAHMEN[faelligkeit]
+          }`}
         >
           {/* Ganze 48-px-Fläche ist das Tippziel (Handschuhe); die Ränder ragen
               über das Polster der Zeile hinaus, damit die Zeile nicht höher wird.
@@ -109,20 +124,16 @@ export function MassnahmenListe({
             />
           ) : (
             <>
-              <div className={kaertchen ? "min-w-0 flex-1" : "min-w-40 flex-1"}>
+              <div className="min-w-40 flex-1">
                 <p
                   className={
-                    massnahme.erledigt
-                      ? "text-sm text-muted line-through"
-                      : kaertchen
-                        ? "text-[15px] font-semibold leading-snug"
-                        : "text-sm font-medium"
+                    massnahme.erledigt ? "text-sm text-muted line-through" : "text-sm font-medium"
                   }
                 >
                   {massnahme.text}
                 </p>
                 {haken.has(massnahme.id) && <p className="text-xs text-warnung">Haken wartet auf Senden</p>}
-                {massnahme.faelligAm && !kaertchen && (
+                {massnahme.faelligAm && (
                   <p
                     className={`text-xs ${
                       massnahme.erledigt ? "text-muted" : FAELLIGKEIT_TEXT[faelligkeit]
@@ -138,16 +149,6 @@ export function MassnahmenListe({
                 )}
               </div>
 
-              {kaertchen && (
-                <span
-                  className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${FAELLIGKEIT_PLAKETTE[faelligkeit]}`}
-                  title={massnahme.faelligAm ? faelligkeitText(faelligkeit, datumAnzeige(massnahme.faelligAm)) : undefined}
-                >
-                  {plakettenText(faelligkeit, massnahme.faelligAm, heute)}
-                </span>
-              )}
-
-              {!kompakt && (
               <div className="flex shrink-0 gap-2">
                 <Button data-schreibt
                   type="button"
@@ -165,7 +166,6 @@ export function MassnahmenListe({
                   Löschen
                 </LoeschenButton>
               </div>
-              )}
             </>
           )}
         </div>
@@ -182,6 +182,111 @@ export function MassnahmenListe({
           Hinzufügen
         </Button>
       </form>
+      )}
+    </div>
+  );
+}
+
+/// Eine offene Maßnahme oben auf der Volk-Seite: weißes Kärtchen mit
+/// Farbleiste und Termin-Plakette, rechts der Stift. Der Stift klappt
+/// darunter ein schmales Formular auf (Text, Termin, ✓ ✕, Löschen). Bei einer
+/// Sammelmaßnahme ändert das nur dieses Volk (Franks Wahl, Entwurf B).
+function KompaktKaertchen({
+  massnahme,
+  heute,
+  wartet,
+  bearbeiten,
+  setBearbeiten,
+  abhaken,
+}: {
+  massnahme: MassnahmeWert;
+  heute: Date;
+  wartet: boolean;
+  bearbeiten: boolean;
+  setBearbeiten: (an: boolean) => void;
+  abhaken: () => void;
+}) {
+  const faelligkeit = faelligkeitBestimmen(massnahme.faelligAm, heute);
+  const bearbeitbar = !massnahme.zuchtserieId && !massnahme.bioVerfahrenId;
+  const plakette = (
+    <span
+      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${FAELLIGKEIT_PLAKETTE[faelligkeit]}`}
+      title={massnahme.faelligAm ? faelligkeitText(faelligkeit, datumAnzeige(massnahme.faelligAm)) : undefined}
+    >
+      {plakettenText(faelligkeit, massnahme.faelligAm, heute)}
+    </span>
+  );
+  const auchBei = massnahme.auchBei ?? [];
+
+  return (
+    <div className={`${KAERTCHEN_BASIS} ${FAELLIGKEIT_KAERTCHEN[faelligkeit]}`}>
+      <div className="flex items-center gap-3 px-3 py-3">
+        <label className="-m-3 flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center">
+          <input
+            type="checkbox"
+            data-schreibt-gesperrt
+            defaultChecked={false}
+            onChange={abhaken}
+            aria-label="Als erledigt markieren"
+            className="h-6 w-6 cursor-pointer accent-accent"
+          />
+        </label>
+        <div className="min-w-0 flex-1">
+          {/* Am Handy steht die Plakette über dem Text, damit neben dem Stift
+              genug Platz für den Text bleibt. */}
+          {bearbeitbar && <div className="mb-1 flex sm:hidden">{plakette}</div>}
+          <p className="text-[15px] font-semibold leading-snug">{massnahme.text}</p>
+          {wartet && <p className="text-xs text-warnung">Haken wartet auf Senden</p>}
+          {massnahme.link && (
+            <Link href={massnahme.link.href} className="mt-1 inline-block text-sm font-medium text-accent underline">
+              {massnahme.link.text}
+            </Link>
+          )}
+        </div>
+        <span className={bearbeitbar ? "hidden sm:contents" : "contents"}>{plakette}</span>
+        {bearbeitbar && (
+          <Button
+            type="button"
+            data-schreibt
+            variant={bearbeiten ? "primary" : "leise"}
+            groesse="symbol"
+            className="-my-2 -mr-1"
+            onClick={() => setBearbeiten(!bearbeiten)}
+            aria-label="Maßnahme bearbeiten"
+            aria-pressed={bearbeiten}
+            title="Bearbeiten"
+          >
+            <IconBearbeiten className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
+      {bearbeiten && (
+        <div className="flex flex-col gap-2 border-t border-border/60 p-3">
+          <MassnahmeBearbeitenFormular
+            massnahme={massnahme}
+            fertig={() => setBearbeiten(false)}
+            zusatz={
+              <LoeschenButton
+                action={massnahmeLoeschen.bind(null, massnahme.id)}
+                bestaetigung="Diese Maßnahme wirklich löschen?"
+                variant="leiseGefahr"
+                groesse="symbol"
+                label="Löschen"
+              >
+                <IconMuelleimer className="h-5 w-5" />
+              </LoeschenButton>
+            }
+          />
+          {auchBei.length > 0 && (
+            <p className="rounded-md bg-flaeche px-3 py-2 text-xs text-muted">
+              Gilt auch für {auchBei.join(", ")}. Hier änderst du nur dieses Volk. Für alle:{" "}
+              <Link href="/massnahmen" className="font-medium text-accent underline">
+                auf der Maßnahmen-Seite
+              </Link>
+              .
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

@@ -12,3 +12,10 @@ export function jetztAlsInputWert(): string {
 export function heuteAlsInputWert(): string {
   return jetztAlsInputWert().slice(0, 10);
 }
+
+/// Gespeichertes Datum zurück ins <input type="date">. Datumsfelder werden
+/// als Mitternacht UTC gespeichert (new Date("2026-10-17")), deshalb hier
+/// bewusst UTC.
+export function datumAlsInputWert(datum: Date): string {
+  return datum.toISOString().slice(0, 10);
+}

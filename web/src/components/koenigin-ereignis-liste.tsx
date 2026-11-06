@@ -6,6 +6,7 @@ import { Button } from "@/components/ui";
 import { LoeschenButton } from "@/components/loeschen-button";
 import { KoeniginEreignisBearbeitenFormular } from "@/components/koenigin-ereignis-bearbeiten-formular";
 import { EREIGNIS_LABEL, kurzesDatum, type EreignisArt } from "@/lib/koeniginnen";
+import { euro } from "@/lib/warenwert";
 
 function alsDatumWert(datum: Date): string {
   const zweistellig = (zahl: number) => zahl.toString().padStart(2, "0");
@@ -20,6 +21,8 @@ export type EreignisWert = {
   volkId: string | null;
   notiz: string | null;
   fotoDateiname: string | null;
+  /// Nur bei art === "VERKAUFT": Erlös und Käufer aus der Verkaufsliste.
+  verkauf?: { preis: number | null; kaeufer: string | null } | null;
   // Nur bei art === "BEWERTUNG" gesetzt - die einzelnen Kriterien dieser
   // Durchsicht, jedes einzeln aus der Königin-Bewertung ausschließbar.
   bewertung: {
@@ -69,6 +72,9 @@ export function KoeniginEreignisListe({
                   volkId: ereignis.volkId,
                   notiz: ereignis.notiz ?? "",
                   fotoUrl: ereignis.fotoDateiname ? `/bilder/${ereignis.fotoDateiname}` : null,
+                  verkauf: ereignis.verkauf
+                    ? { preis: ereignis.verkauf.preis, kaeufer: ereignis.verkauf.kaeufer ?? "" }
+                    : null,
                 }}
                 voelker={voelker}
                 action={aktualisierenAction}
@@ -90,6 +96,16 @@ export function KoeniginEreignisListe({
                       </>
                     )}
                   </p>
+                  {ereignis.verkauf && (ereignis.verkauf.preis !== null || ereignis.verkauf.kaeufer) && (
+                    <p className="text-xs text-muted">
+                      {[
+                        ereignis.verkauf.preis !== null ? euro(ereignis.verkauf.preis) : null,
+                        ereignis.verkauf.kaeufer ? `an ${ereignis.verkauf.kaeufer}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  )}
                   {ereignis.notiz && <p className="text-xs text-muted">{ereignis.notiz}</p>}
                   {ereignis.bewertung && ereignis.bewertung.kriterien.length > 0 && (
                     <div className="mt-1.5 flex flex-col gap-1 rounded-md border border-border bg-background p-2">

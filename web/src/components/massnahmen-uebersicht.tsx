@@ -10,6 +10,7 @@ import { useAbhaken, useWartendeHaken } from "@/lib/use-abhaken";
 import { LoeschenButton } from "@/components/loeschen-button";
 import { MassnahmeBearbeitenFormular } from "@/components/massnahme-bearbeiten-formular";
 import { IconBearbeiten, IconMuelleimer } from "@/components/icons";
+import { SammelMassnahmeBearbeiten, type VolkWahlStand } from "@/components/sammel-massnahme-bearbeiten";
 import {
   FAELLIGKEIT_KAERTCHEN,
   FAELLIGKEIT_PLAKETTE,
@@ -98,17 +99,10 @@ function SymbolKnoepfe({ massnahme, bearbeiten }: { massnahme: MassnahmeMitVolk;
   );
 }
 
-/// Ein Volk einer Sammelmaßnahme: Haken, Volkname (führt zum Volk),
-/// Bearbeiten und Löschen als Symbole. Eine Zeile, 44 px hoch.
+/// Ein Volk einer Sammelmaßnahme: Haken und Volkname (führt zum Volk).
+/// Eine Zeile, 44 px hoch. Bearbeitet wird die ganze Gruppe über den Stift im
+/// Kopf, ein einzelnes Volk auf seiner Volk-Seite.
 function VolkZeile({ massnahme }: { massnahme: MassnahmeMitVolk }) {
-  const [bearbeiten, setBearbeiten] = useState(false);
-  if (bearbeiten) {
-    return (
-      <div className="col-span-full flex items-start gap-3 rounded-md border border-border bg-card px-3 py-2">
-        <MassnahmeBearbeitenFormular massnahme={massnahme} fertig={() => setBearbeiten(false)} />
-      </div>
-    );
-  }
   return (
     <div className="flex min-h-11 items-center gap-1 border-b border-border/60">
       <label className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
@@ -122,7 +116,6 @@ function VolkZeile({ massnahme }: { massnahme: MassnahmeMitVolk }) {
       >
         {massnahme.volkName}
       </Link>
-      <SymbolKnoepfe massnahme={massnahme} bearbeiten={() => setBearbeiten(true)} />
     </div>
   );
 }
@@ -328,13 +321,17 @@ function SammelGruppe({
   massnahmen,
   heute,
   schonErledigt = 0,
+  wahlStaende,
 }: {
   massnahmen: MassnahmeMitVolk[];
   heute: Date;
+  /// Für "+ Volk" beim Bearbeiten.
+  wahlStaende?: VolkWahlStand[];
   /// Völker derselben Sammelmaßnahme, die schon abgehakt sind ("3/9 erledigt").
   schonErledigt?: number;
 }) {
   const [offen, setOffen] = useState(false);
+  const [bearbeiten, setBearbeiten] = useState(false);
   const [speichert, setSpeichert] = useState(false);
   const abhaken = useAbhaken();
   const erste = massnahmen[0]!;
@@ -357,11 +354,15 @@ function SammelGruppe({
         erledigt ? "rounded-md border border-border bg-background" : `${KAERTCHEN_BASIS} ${FAELLIGKEIT_KAERTCHEN[faelligkeit]}`
       }
     >
+      <div className="flex items-center gap-1 pr-2">
       <button
         type="button"
-        onClick={() => setOffen(!offen)}
+        onClick={() => {
+          setOffen(!offen);
+          setBearbeiten(false);
+        }}
         aria-expanded={offen}
-        className={`flex w-full cursor-pointer gap-3 px-3 text-left ${erledigt ? "items-start py-2" : "items-center py-3"}`}
+        className={`flex min-w-0 flex-1 cursor-pointer gap-3 px-3 text-left ${erledigt ? "items-start py-2" : "items-center py-3"}`}
       >
         <span
           className={`inline-block w-4 shrink-0 text-center text-muted transition-transform ${erledigt ? "mt-0.5 text-sm" : "text-lg"} ${offen ? "rotate-90" : ""}`}
@@ -390,7 +391,30 @@ function SammelGruppe({
         </span>
         {!erledigt && <TerminPlakette faelligAm={erste.faelligAm} heute={heute} />}
       </button>
-      {offen && (
+      {!erledigt && (
+        <Button
+          type="button"
+          data-schreibt
+          variant={bearbeiten ? "primary" : "leise"}
+          groesse="symbol"
+          onClick={() => {
+            setBearbeiten(!bearbeiten);
+            setOffen(true);
+          }}
+          aria-label="Für alle Völker bearbeiten"
+          aria-pressed={bearbeiten}
+          title="Für alle Völker bearbeiten"
+        >
+          <IconBearbeiten className="h-5 w-5" />
+        </Button>
+      )}
+      </div>
+      {offen && bearbeiten && (
+        <div className="border-t border-border/60">
+          <SammelMassnahmeBearbeiten massnahmen={massnahmen} staende={wahlStaende} fertig={() => setBearbeiten(false)} />
+        </div>
+      )}
+      {offen && !bearbeiten && (
         <div className="flex flex-col gap-3 border-t border-border/60 p-2 sm:pl-9">
           {standNamen.map((standName) => (
             <div key={standName}>
@@ -547,9 +571,12 @@ export function MassnahmenUebersicht({
   massnahmen,
   heute,
   erledigte = [],
+  staende,
 }: {
   massnahmen: MassnahmeMitVolk[];
   heute: Date;
+  /// Alle Stände mit Völkern, für "+ Volk" beim Bearbeiten einer Sammelmaßnahme.
+  staende?: VolkWahlStand[];
   /// Nur für die offene Liste: die erledigten, um bei Sammelmaßnahmen
   /// mitzuzählen, wie viele Völker schon fertig sind.
   erledigte?: MassnahmeMitVolk[];
@@ -583,6 +610,7 @@ export function MassnahmenUebersicht({
             key={eintrag.schluessel}
             massnahmen={eintrag.massnahmen}
             heute={heute}
+            wahlStaende={staende}
             schonErledigt={
               eintrag.massnahmen[0]!.erledigt
                 ? 0

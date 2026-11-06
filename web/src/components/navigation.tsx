@@ -20,6 +20,7 @@ import {
   IconAnleitung,
   IconWabenrahmen,
   IconHonigglas,
+  IconVerkauf,
   IconWinkelRechts,
 } from "@/components/icons";
 
@@ -56,6 +57,7 @@ export type Unterpunkt = {
 const LAGER_UNTERPUNKTE: Unterpunkt[] = [
   { href: "/lager/material", label: "Material", inhalt: "Zargen, Klimadeckel, Zubehör", icon: IconWabenrahmen },
   { href: "/lager/erzeugnisse", label: "Erzeugnisse", inhalt: "Honig, Wachs, Gläser", icon: IconHonigglas },
+  { href: "/lager/verkaeufe", label: "Verkäufe", inhalt: "Erlös, Völker, Königinnen", icon: IconVerkauf },
 ];
 
 export function navItems(faellig: number, velutina: number, aus: readonly string[]): NavItem[] {
