@@ -179,7 +179,8 @@ export async function leistungLaden(koenigin: KoeniginFuerLeistung): Promise<Lei
     brutwabenSchnitt: schnitt(
       eintraege
         .map((eintrag) => eintrag.brutwaben)
-        .filter((wert): wert is number => typeof wert === "number")
+        // Nur gegebene Brutwaben - negative Werte sind entnommene.
+        .filter((wert): wert is number => typeof wert === "number" && wert > 0)
     ),
     honigSummeKg: ernten.reduce((summe, eintrag) => summe + (eintrag.honigertragKg ?? 0), 0),
     anzahlErnten: ernten.length,

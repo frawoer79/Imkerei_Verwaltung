@@ -7,6 +7,9 @@ import { Card, Label, Input, Select, Textarea, Button } from "@/components/ui";
 import { FormularFehler, SicheresFormular, SpeichernKnopf } from "@/components/sicheres-formular";
 import { BrutraumAuswahl } from "@/components/brutraum-auswahl";
 import { DeckelAuswahl } from "@/components/deckel-auswahl";
+import { WabenStartFelder } from "@/components/waben-start-felder";
+import { wabenbestandLaden, wabenSeitErfassungGeaendert } from "@/lib/wabenbestand";
+import { kurzesDatum } from "@/lib/honig";
 import { EinzelfotoAuswahl } from "@/components/einzelfoto-auswahl";
 import { KoeniginSchnellangaben } from "@/components/koenigin-schnellangaben";
 import { beutenStammdatenLaden } from "@/lib/beuten";
@@ -55,6 +58,22 @@ export default async function VolkBearbeitenPage({
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
+
+  // Wabenbestand: erfasst oder nicht, und ob sich seitdem etwas getan hat -
+  // dann passt die Aufteilung je Art nicht mehr und wird beim Korrigieren
+  // nicht vorbelegt.
+  const wabenStandAm = volk.wabenStandAm;
+  const [wabenBestand, wabenGeaendert] = wabenStandAm
+    ? await Promise.all([wabenbestandLaden(volk.id), wabenSeitErfassungGeaendert(volk.id, wabenStandAm)])
+    : [null, false];
+  const wabenVorgabe = wabenStandAm && !wabenGeaendert
+    ? {
+        wabenBrut: volk.wabenBrut,
+        wabenFutter: volk.wabenFutter,
+        wabenLeer: volk.wabenLeer,
+        wabenMittelwaende: volk.wabenMittelwaende,
+      }
+    : {};
 
   const aktualisieren = volkAktualisieren.bind(null, volk.id);
   const archivieren = volkArchivieren.bind(null, volk.id);
@@ -130,6 +149,37 @@ export default async function VolkBearbeitenPage({
             zargeId={volk.brutraumZargeId}
             zargenAnzahl={volk.brutraumZargenAnzahl}
           />
+          <fieldset id="waben" className="flex scroll-mt-24 flex-col gap-2">
+            <legend className="mb-1 text-sm font-medium">Waben im Brutraum</legend>
+            {wabenStandAm === null ? (
+              <>
+                <p className="rounded-md border border-warnung-rand bg-warnung-flaeche p-3 text-sm text-warnung">
+                  Noch nicht erfasst. Trag ein, was jetzt im Brutraum hängt. Erst dann kann die Durchsicht
+                  prüfen, ob genug Waben zum Entnehmen da sind.
+                </p>
+                <WabenStartFelder brutraeume={brutraeume} />
+              </>
+            ) : (
+              <>
+                <p className="-mt-1 text-sm text-muted">
+                  Jetzt <span className="font-semibold text-foreground">{wabenBestand} Waben</span> in der Beute.
+                  Erfasst am {kurzesDatum(wabenStandAm)}
+                  {wabenGeaendert ? ", seitdem mit den Durchsichten verrechnet." : "."}
+                </p>
+                <details className="group rounded-md border border-border p-3" open={!wabenGeaendert}>
+                  <summary className="cursor-pointer text-sm font-medium text-accent">
+                    {wabenGeaendert ? "Ist-Stand neu erfassen" : "Waben korrigieren"}
+                  </summary>
+                  <p className="mb-3 mt-2 text-xs text-muted">
+                    {wabenGeaendert
+                      ? "Trag ein, was jetzt im Brutraum hängt. Leer lassen ändert nichts."
+                      : "Die Werte vom Erfassen. Ändern und speichern setzt den Stand neu."}
+                  </p>
+                  <WabenStartFelder brutraeume={brutraeume} werte={wabenVorgabe} />
+                </details>
+              </>
+            )}
+          </fieldset>
           <DeckelAuswahl klimadeckel={klimadeckel} klimadeckelId={volk.klimadeckelId} />
           <EinzelfotoAuswahl
             name="beuteFoto"

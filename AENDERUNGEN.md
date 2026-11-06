@@ -14,6 +14,14 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## 1.2.0
+
+- Beim Anlegen eines Volkes werden die Waben im Brutraum erfasst, getrennt nach Brutwaben, Futterwaben, Leerwaben und Mittelwänden. Mindestens eine Wabe, höchstens so viele, wie in den Brutraum passen.
+- Bei bestehenden Völkern weist die Volk-Seite darauf hin, die Waben nachzutragen. Unter Bearbeiten lässt sich der Ist-Stand jederzeit neu erfassen.
+- In der Durchsicht lassen sich Waben jetzt auch entnehmen: +2 heißt gegeben, −2 entnommen. Die App zeigt, wie viele Waben danach in der Beute sind, und lässt nicht mehr entnehmen, als da sind.
+- Die Stockkarte zeigt gegebene und entnommene Waben an.
+- Das Update erweitert die Datenbank um den Wabenbestand. Vorhandene Daten bleiben erhalten, ältere Durchsichten zählen als gegebene Waben. Vorher wird wie immer eine Sicherung angelegt.
+
 ## 1.1.1
 
 - Der Hell-/Dunkel-Schalter zeigt beim ersten Öffnen den richtigen Zustand. Bisher stand er auf Hell, obwohl die Seite dem dunklen Handy folgte, und brauchte zwei Klicks.

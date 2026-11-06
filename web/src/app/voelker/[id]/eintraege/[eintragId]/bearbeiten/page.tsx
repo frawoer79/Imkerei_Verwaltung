@@ -18,6 +18,7 @@ import { FormularFehler } from "@/components/sicheres-formular";
 import { FotoAuswahl } from "@/components/foto-auswahl";
 import { stockkartenBildName } from "@/lib/bild-name";
 import { beutenStammdatenLaden } from "@/lib/beuten";
+import { wabenbestandLaden } from "@/lib/wabenbestand";
 import Link from "next/link";
 
 // Für <input type="datetime-local"> - lokale Zeit, keine Zeitzonen-Umrechnung
@@ -61,6 +62,11 @@ export default async function StockkartenEintragBearbeitenPage({
   }
 
   const beuten = await beutenStammdatenLaden();
+  // Wabenbestand ohne diesen Eintrag - Grenze fürs Entnehmen. Liegt der
+  // Eintrag vor dem Erfassen der Waben, zählt er ohnehin nicht mit.
+  const standAm = eintrag.volk.wabenStandAm;
+  const wabenBestand =
+    standAm === null ? null : eintrag.datum > standAm ? await wabenbestandLaden(id, eintrag.id) : undefined;
 
   // Zur Auswahl stehen alle Honigräume, die noch oben sitzen - plus die, die
   // dieser Eintrag selbst geerntet hat (sonst wären sie beim Bearbeiten weg
@@ -140,6 +146,8 @@ export default async function StockkartenEintragBearbeitenPage({
               eigenesSystemId={eintrag.volk.brutraumZarge?.wabenmass.beutensystem.id ?? null}
               behandlungenAn={!aus.includes("behandlungen")}
               fuettererAuf={fuettererAuf}
+              wabenBestand={wabenBestand}
+              wabenNachtragenHref={`/voelker/${id}/bearbeiten`}
             />
 
             <FormularFehler />

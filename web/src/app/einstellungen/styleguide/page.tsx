@@ -19,6 +19,8 @@ import { MiniStrahl } from "@/components/mini-strahl";
 import { SeitenNavigation } from "@/components/seiten-navigation";
 import { StandtypBadge } from "@/components/standtyp";
 import { ZahlStepper } from "@/components/zahl-stepper";
+import { WabenAenderungFelder } from "@/components/waben-aenderung-felder";
+import { WabenStartFelder } from "@/components/waben-start-felder";
 import { VerkaufFelder } from "@/components/verkauf-felder";
 import { BEURTEILUNGS_KRITERIEN, GESAMTEINDRUCK_KRITERIUM } from "@/components/stockkarten-eintrag-felder";
 import { ChipBeispiel, FarbFeld, SchalterBeispiel, SortierBeispiel } from "./beispiele";
@@ -294,6 +296,25 @@ export default async function StyleguidePage() {
             <ZahlStepper name="sg-waben" label="Besetzte Wabengassen" letzterWert={8} />
             <Quelle>{"<ZahlStepper> (zahl-stepper.tsx)"}</Quelle>
           </div>
+          <div>
+            <ZahlStepper name="sg-waben-plusminus" label="Brutwaben" defaultValue={-2} min={-10} max={20} vorzeichen />
+            <Quelle>{"<ZahlStepper vorzeichen> gegeben (+) / entnommen (−), 0 = leer"}</Quelle>
+          </div>
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <WabenAenderungFelder werte={{ brutwaben: -3, mittelwaende: 1 }} bestand={14} />
+            <Quelle>
+              {"<WabenAenderungFelder>"} (waben-aenderung-felder.tsx) Waben geben/entnehmen in der Durchsicht.
+              Entnehmen höchstens bis zum Wabenbestand (lib/wabenbestand.ts), bestand=null zeigt den Hinweis zum
+              Nachtragen.
+            </Quelle>
+          </div>
+          <form className="sm:col-span-2">
+            <WabenStartFelder brutraeume={[]} werte={{ wabenBrut: 3, wabenFutter: 1, wabenMittelwaende: 2 }} />
+            <Quelle>
+              {"<WabenStartFelder>"} (waben-start-felder.tsx) Waben je Art beim Anlegen/Bearbeiten eines Volkes,
+              Obergrenze aus Brutraum-Auswahl im selben Formular.
+            </Quelle>
+          </form>
           <div className="sm:col-span-2">
             <ChipBeispiel />
             <Quelle>

@@ -183,6 +183,12 @@ async function anlegen(jetzt: Date, demo: boolean) {
       koeniginId: k1.id,
       standReihenfolge: 0,
       notizen: "Stärkstes Volk am Stand, sehr sanft.",
+      // Waben im Brutraum beim Anlegen (siehe lib/wabenbestand.ts).
+      wabenBrut: 5,
+      wabenFutter: 7,
+      wabenLeer: 3,
+      wabenMittelwaende: 0,
+      wabenStandAm: am([3, 20, 10, 0]),
       createdAt: am([3, 20, 10, 0]),
     },
   });
@@ -196,6 +202,11 @@ async function anlegen(jetzt: Date, demo: boolean) {
       koeniginId: k2.id,
       standReihenfolge: 1,
       notizen: "Neigt zum Schwärmen. Im Mai Ableger gebildet (Volk 3).",
+      wabenBrut: 6,
+      wabenFutter: 6,
+      wabenLeer: 3,
+      wabenMittelwaende: 0,
+      wabenStandAm: am([3, 20, 10, 1]),
       createdAt: am([3, 20, 10, 1]),
     },
   });
@@ -208,6 +219,12 @@ async function anlegen(jetzt: Date, demo: boolean) {
       brutraumZargenAnzahl: 1,
       standReihenfolge: 2,
       notizen: "Ableger aus Volk 2, Königin selbst nachgezogen.",
+      // Der Ableger: 3 Brutwaben aus Volk 2, 1 Futterwabe, 2 Mittelwände.
+      wabenBrut: 3,
+      wabenFutter: 1,
+      wabenLeer: 0,
+      wabenMittelwaende: 2,
+      wabenStandAm: am([5, 9, 15, 0]),
       createdAt: am([5, 9, 15, 0]),
     },
   });
@@ -531,7 +548,8 @@ async function anlegen(jetzt: Date, demo: boolean) {
       verdeckelteBrutGesehen: true,
       weiselzellenGesehen: true,
       volksstaerke: 15,
-      brutwaben: 3,
+      // Für den Ableger entnommen (Volk 3).
+      brutwaben: -3,
       volksstaerkeEinschaetzung: 1.5,
       sanftmut: 3.5,
       schwarmtrieb: 4.5,
@@ -610,9 +628,6 @@ async function anlegen(jetzt: Date, demo: boolean) {
   // Volk 3: Ableger mit selbst nachgezogener Königin, Varroa im Juli hoch.
   await eintrag(v3, [5, 9, 15, 0], {
     weiselzellenGesehen: true,
-    brutwaben: 3,
-    futterwaben: 1,
-    mittelwaende: 2,
     fuetterungArt: "FUTTERTEIG",
     fuetterungMengeKg: 1,
     notizen: "Ableger aus Volk 2 gebildet: 3 Brutwaben mit Weiselzellen, 1 Futterwabe, 2 Mittelwände.",
@@ -836,6 +851,10 @@ async function anlegen(jetzt: Date, demo: boolean) {
             rasse: "Carnica",
             brutraumZargeId: brutraum.id,
             brutraumZargenAnzahl: volkDaten.grund >= 3 ? 1 : 2,
+            ...(volkDaten.grund >= 3
+              ? { wabenBrut: 3, wabenFutter: 3, wabenLeer: 1, wabenMittelwaende: 0 }
+              : { wabenBrut: 5, wabenFutter: 6, wabenLeer: 3, wabenMittelwaende: 0 }),
+            wabenStandAm: am([3, 21 + standIndex, 11, index]),
             koeniginId: koenigin.id,
             standReihenfolge: index,
             notizen: volkDaten.notiz,
