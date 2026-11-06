@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { uploadPfad } from "@/lib/uploads";
 import { entschluesseln } from "@/lib/geheim";
+import { DEMO_MAIL_MELDUNG, istDemo } from "@/lib/demo";
 import { zuchtkartenPdfErzeugen } from "@/lib/zuchtkarte-druck";
 import type { DokumentTyp } from "@/lib/dokumente-typen";
 
@@ -46,6 +47,7 @@ export async function mailKonfigLaden(client: Pick<PrismaClient, "mailEinstellun
 
 // Eingetragen und mit einer Testmail bestätigt? Nur dann gibt es den Knopf.
 export async function mailBereit(client: Pick<PrismaClient, "mailEinstellung"> = prisma): Promise<boolean> {
+  if (istDemo()) return false;
   const konfig = await mailKonfigLaden(client);
   return Boolean(konfig?.getestetAm && konfig.passwortLesbar);
 }
@@ -214,6 +216,8 @@ export async function mailSenden(
     anhaenge?: Anhang[];
   },
 ): Promise<void> {
+  // Öffentliche Demo: nie etwas verschicken (Spam-Schutz).
+  if (istDemo()) throw new Error(DEMO_MAIL_MELDUNG);
   const transport = nodemailer.createTransport({
     host: konfig.host,
     port: konfig.port,

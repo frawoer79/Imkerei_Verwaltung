@@ -1,3 +1,5 @@
+import { adresssucheGebremst, besucherAdresse, DEMO_SUCHE_MELDUNG, istDemo } from "@/lib/demo";
+
 // Wandelt Koordinaten in eine Adresse um ("Reverse Geocoding"), z.B. nachdem
 // auf der Karte ein Punkt gesetzt wurde. Details siehe ../route.ts.
 const NOMINATIM_USER_AGENT = "Imkereiverwaltung/1.0 (privates Einzelprojekt)";
@@ -20,6 +22,10 @@ export async function GET(request: Request) {
 
   if (!breitengrad || !laengengrad) {
     return Response.json({ fehler: "Koordinaten fehlen." }, { status: 400 });
+  }
+
+  if (istDemo() && adresssucheGebremst(besucherAdresse(request.headers))) {
+    return Response.json({ fehler: DEMO_SUCHE_MELDUNG }, { status: 429 });
   }
 
   const url = new URL("https://nominatim.openstreetmap.org/reverse");

@@ -14,6 +14,12 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## 1.1.1
+
+- Der Hell-/Dunkel-Schalter zeigt beim ersten Öffnen den richtigen Zustand. Bisher stand er auf Hell, obwohl die Seite dem dunklen Handy folgte, und brauchte zwei Klicks.
+- Suchmaschinen nehmen eine eigene Installation nicht mehr in ihren Index auf (`robots.txt`).
+- Neuer Schalter `DEMO_MODUS` für eine öffentliche Demo-Instanz mit Fantasiedaten. Nur für eine eigene Instanz mit eigener Datenbank gedacht, nie bei echten Daten. Beschreibung in `web/.env.example`.
+
 ## 1.1.0
 
 - Neue Seite Lager → Verkäufe: alles Verkaufte auf einen Blick, mit Erlös, Käufer, Suche und Jahresfilter.

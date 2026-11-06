@@ -1,3 +1,5 @@
+import { adresssucheGebremst, besucherAdresse, DEMO_SUCHE_MELDUNG, istDemo } from "@/lib/demo";
+
 // Wandelt eine Adresse in Koordinaten um ("Geocoding"), über den kostenlosen
 // Nominatim-Dienst von OpenStreetMap. Läuft serverseitig, weil Nominatims
 // Nutzungsbedingungen einen aussagekräftigen User-Agent verlangen - den kann
@@ -10,6 +12,10 @@ export async function GET(request: Request) {
 
   if (!q) {
     return Response.json({ fehler: "Adresse fehlt." }, { status: 400 });
+  }
+
+  if (istDemo() && adresssucheGebremst(besucherAdresse(request.headers))) {
+    return Response.json({ fehler: DEMO_SUCHE_MELDUNG }, { status: 429 });
   }
 
   const url = new URL("https://nominatim.openstreetmap.org/search");

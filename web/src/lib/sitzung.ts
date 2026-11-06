@@ -8,13 +8,15 @@ import { SITZUNGS_COOKIE_NAME, sitzungswertErzeugen } from "@/lib/anmeldung";
 const SITZUNGSDAUER_SEKUNDEN = 60 * 60 * 24 * 30; // 30 Tage
 
 // Setzt das Sitzungs-Cookie für ein Konto ("admin" oder Testzugang).
-export async function sitzungSetzen(konto: string) {
+// `bisBrowserZu`: ohne Ablaufdatum, der Browser vergisst es beim Schließen
+// (Demo, siehe lib/demo.ts).
+export async function sitzungSetzen(konto: string, { bisBrowserZu = false }: { bisBrowserZu?: boolean } = {}) {
   const cookieStore = await cookies();
   cookieStore.set(SITZUNGS_COOKIE_NAME, sitzungswertErzeugen(konto), {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
     path: "/",
-    maxAge: SITZUNGSDAUER_SEKUNDEN,
+    ...(bisBrowserZu ? {} : { maxAge: SITZUNGSDAUER_SEKUNDEN }),
   });
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { DEMO_MAIL_MELDUNG, istDemo } from "@/lib/demo";
 import { prisma } from "@/lib/prisma";
 import { DOKUMENT_TYP_LABEL, dateigroesseAnzeige, type DokumentTyp } from "@/lib/dokumente-typen";
 import { verschluesseln } from "@/lib/geheim";
@@ -36,6 +37,7 @@ async function eigeneAngaben(absender: string) {
 // Liste kennt - geladen wird alles neu aus der Datenbank des angemeldeten
 // Kontos, nichts davon wird ungeprüft übernommen.
 export async function dokumenteVersenden(formData: FormData): Promise<MailErgebnis> {
+  if (istDemo()) return { ok: false, meldung: DEMO_MAIL_MELDUNG };
   const konfig = await mailKonfigLaden();
   if (!konfig?.getestetAm || !konfig.passwortLesbar) {
     return { ok: false, meldung: "Der E-Mail-Versand ist unter Einstellungen → E-Mail-Versand nicht eingerichtet." };
@@ -108,6 +110,7 @@ export async function dokumenteVersenden(formData: FormData): Promise<MailErgebn
 // der Versand als eingerichtet (getestetAm) und der Knopf unter Dokumente
 // erscheint. Ein leeres Passwortfeld behält das gespeicherte Passwort.
 export async function mailEinstellungenSpeichern(formData: FormData): Promise<MailErgebnis> {
+  if (istDemo()) return { ok: false, meldung: DEMO_MAIL_MELDUNG };
   const text = (name: string) => String(formData.get(name) ?? "").trim();
   const host = text("host");
   const port = Number(text("port"));

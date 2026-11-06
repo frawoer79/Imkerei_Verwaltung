@@ -555,3 +555,12 @@ export function IconVerkauf({ className }: IconProps) {
     </svg>
   );
 }
+
+/// Spitze Klammern: Quellcode (Link zum Repository in der Demo).
+export function IconCode({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={className} aria-hidden="true">
+      <path d="m6.5 6-4 4 4 4M13.5 6l4 4-4 4M11.25 3.5l-2.5 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

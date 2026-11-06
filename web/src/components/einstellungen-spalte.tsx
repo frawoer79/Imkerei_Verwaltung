@@ -12,14 +12,16 @@ export function EinstellungenSpalte({
   admin,
   helfer,
   entwickler,
+  demo = false,
 }: {
   aus: readonly string[];
   admin: boolean;
   helfer: boolean;
   entwickler: boolean;
+  demo?: boolean;
 }) {
   const pathname = usePathname();
-  const gruppen = sichtbareGruppen(aus, admin, helfer, entwickler);
+  const gruppen = sichtbareGruppen(aus, admin, helfer, entwickler, demo);
   return (
     <nav aria-label="Einstellungen" className="flex flex-col gap-4">
       <p className="px-3 text-2xl font-semibold tracking-tight">Einstellungen</p>

@@ -39,16 +39,23 @@ export async function beispieldatenVorhanden(schema: string): Promise<boolean> {
 
 /// Legt die Beispieldaten im Schema eines Testers an. Gibt false zurück, wenn
 /// sie dort schon liegen (dann passiert nichts).
-export async function beispieldatenAnlegen(schema: string, jetzt: Date = new Date()): Promise<boolean> {
+/// `demo`: zusätzlich zwei weitere Stände mit sieben Völkern für die
+/// öffentliche Demo (lib/demo.ts), damit Übersichten, Karte und Auswertungen
+/// nach einem echten Betrieb aussehen.
+export async function beispieldatenAnlegen(
+  schema: string,
+  jetzt: Date = new Date(),
+  { demo = false }: { demo?: boolean } = {},
+): Promise<boolean> {
   if (!/^tester_[a-z0-9]+$/.test(schema)) {
     throw new Error("Beispieldaten gibt es nur für Testzugänge.");
   }
   if (await beispieldatenVorhanden(schema)) return false;
-  await mitSchema(schema, () => anlegen(jetzt));
+  await mitSchema(schema, () => anlegen(jetzt, demo));
   return true;
 }
 
-async function anlegen(jetzt: Date) {
+async function anlegen(jetzt: Date, demo: boolean) {
   const jahr = jetzt.getMonth() >= 7 ? jetzt.getFullYear() : jetzt.getFullYear() - 1;
   const am = ([monat, tag, stunde = 10, minute = 0]: Datum, j = jahr) => new Date(j, monat - 1, tag, stunde, minute);
   const tageAb = (tage: number) => {
@@ -745,6 +752,258 @@ async function anlegen(jetzt: Date) {
       })),
     ],
   });
+
+  // --- Weitere Stände (nur Demo) -----------------------------------------
+  // Ein fester Heimstand und ein Wanderstand an der Waldtracht. Die
+  // Durchsichten entstehen aus einem festen Muster je Volk, leicht versetzt
+  // und mit eigenen Werten, damit die Völker unterscheidbar bleiben.
+  if (demo) {
+    // Gleiche Zahlenfolge bei jedem Aufbau: die Demo sieht immer gleich aus.
+    let saat = 7;
+    const zufall = () => {
+      saat = (saat * 9301 + 49297) % 233280;
+      return saat / 233280;
+    };
+    // Noten 1,0 bis 6,0 in halben Schritten, um einen Grundwert gestreut.
+    const note = (grund: number) => Math.min(6, Math.max(1, Math.round((grund + (zufall() - 0.5)) * 2) / 2));
+
+    const weitereStaende = [
+      {
+        name: "Heimstand",
+        ort: "Musterdorf",
+        breitengrad: 48.5531,
+        laengengrad: 9.0496,
+        standtyp: "FEST" as const,
+        notizen: "Hinter der Scheune, windgeschützt. Erfundener Stand der Demo.",
+        voelker: [
+          { name: "Linde", grund: 1.5, notiz: "Ruhiges Volk, gute Wabenbauerin." },
+          { name: "Holunder", grund: 2.5, notiz: "Etwas nervös auf der Wabe." },
+          { name: "Quitte", grund: 2, notiz: "Kräftig, neigt im Mai zum Schwärmen." },
+        ],
+      },
+      {
+        name: "Waldrand",
+        ort: "Musterwald",
+        breitengrad: 48.5215,
+        laengengrad: 8.9871,
+        standtyp: "WANDER" as const,
+        notizen: "Wanderstand an der Waldtracht, Völker stehen von Juni bis August hier.",
+        voelker: [
+          { name: "Tanne 1", grund: 2, notiz: "Aus dem Heimstand zugewandert." },
+          { name: "Tanne 2", grund: 1.5, notiz: "Bestes Volk der Saison." },
+          { name: "Tanne 3", grund: 3, notiz: "Schwächer, wird beobachtet." },
+          { name: "Tanne 4", grund: 2.5, notiz: "Jungvolk aus dem Vorjahr." },
+        ],
+      },
+    ];
+
+    const alleNeuen: { id: string; name: string; standName: string }[] = [];
+    for (const [standIndex, standDaten] of weitereStaende.entries()) {
+      const neuerStand = await prisma.bienenstand.create({
+        data: {
+          name: standDaten.name,
+          ort: standDaten.ort,
+          breitengrad: standDaten.breitengrad,
+          laengengrad: standDaten.laengengrad,
+          notizen: standDaten.notizen,
+          standtyp: standDaten.standtyp,
+          voelkerSortierung: "STANDPOSITION",
+          createdAt: am([3, 21 + standIndex], jahr),
+        },
+      });
+      for (const [index, volkDaten] of standDaten.voelker.entries()) {
+        const jahrgang = jahr - (index % 3);
+        const koenigin = await prisma.koenigin.create({
+          data: {
+            kennung: `${standDaten.name.slice(0, 2).toUpperCase()} ${jahrgang}-${index + 1}`,
+            rasse: "Carnica",
+            jahrgang,
+            zeichenFarbe: farbe(jahrgang),
+            zeichenNummer: String(20 + standIndex * 10 + index),
+            herkunft: index % 2 === 0 ? "EIGENE_NACHZUCHT" : "ZUKAUF",
+            herkunftText: index % 2 === 0 ? null : "Zuchtbetrieb (Beispiel)",
+            begattungsart: index % 2 === 0 ? "BELEGSTELLE" : "STANDBEGATTUNG",
+            belegstelleId: index % 2 === 0 ? belegstelle.id : null,
+            mutterKoeniginId: index % 2 === 0 ? k1.id : null,
+            stern: volkDaten.grund <= 1.5,
+            status: "IM_VOLK",
+          },
+        });
+        const neuesVolk = await prisma.volk.create({
+          data: {
+            bienenstandId: neuerStand.id,
+            name: volkDaten.name,
+            rasse: "Carnica",
+            brutraumZargeId: brutraum.id,
+            brutraumZargenAnzahl: volkDaten.grund >= 3 ? 1 : 2,
+            koeniginId: koenigin.id,
+            standReihenfolge: index,
+            notizen: volkDaten.notiz,
+            createdAt: am([3, 21 + standIndex, 11, index]),
+          },
+        });
+        alleNeuen.push({ id: neuesVolk.id, name: neuesVolk.name, standName: neuerStand.name });
+        await prisma.koeniginEreignis.create({
+          data: { koeniginId: koenigin.id, datum: am([6, 10], jahrgang), art: "ZUGESETZT", volkId: neuesVolk.id },
+        });
+
+        const v = { id: neuesVolk.id, koeniginId: koenigin.id };
+        const g = volkDaten.grund;
+        const t = index; // Durchsichten je Volk um ein paar Tage versetzt
+        const staerke = (spitze: number) => Math.max(4, Math.round(spitze - g * 1.5 + zufall() * 2));
+        await eintrag(
+          v,
+          [4, 6 + t, 11, 0],
+          {
+            koeniginGesehen: zufall() > 0.4,
+            stifteGesehen: true,
+            larvenGesehen: true,
+            verdeckelteBrutGesehen: true,
+            volksstaerke: staerke(11),
+            bebrueteteWaben: Math.max(3, 7 - Math.round(g)),
+            volksstaerkeEinschaetzung: note(g),
+            futtermengeEinschaetzung: note(2),
+            sanftmut: note(g),
+            gesamteindruck: note(g),
+            notizen: "Auswinterung: Volk sitzt gut, Futter reicht.",
+          },
+          { zurKoenigin: true },
+        );
+        await eintrag(
+          v,
+          [4, 24 + t, 15, 0],
+          {
+            stifteGesehen: true,
+            larvenGesehen: true,
+            volksstaerke: staerke(15),
+            mittelwaende: 2,
+            baurahmenDrohnenrahmen: 1,
+            volksstaerkeEinschaetzung: note(g),
+            schwarmtrieb: note(1.5),
+            notizen: "Honigraum aufgesetzt, Baurahmen gegeben.",
+          },
+          { aufsetzen: true },
+        );
+        await eintrag(
+          v,
+          [5, 12 + t, 10, 0],
+          {
+            koeniginGesehen: zufall() > 0.5,
+            stifteGesehen: true,
+            larvenGesehen: true,
+            verdeckelteBrutGesehen: true,
+            weiselzellenGesehen: volkDaten.name === "Quitte",
+            volksstaerke: staerke(20),
+            volksstaerkeEinschaetzung: note(g - 0.5),
+            sanftmut: note(g),
+            schwarmtrieb: volkDaten.name === "Quitte" ? 4 : note(2),
+            wabensitz: note(g),
+            legeleistung: note(g),
+            gesamteindruck: note(g),
+            drohnenbrutGeschnitten: true,
+            notizen:
+              volkDaten.name === "Quitte"
+                ? "Bestiftete Weiselzellen. Zellen gebrochen, Schwarmkontrolle in 7 Tagen."
+                : "Baurahmen geschnitten, keine Schwarmstimmung.",
+          },
+          {
+            zurKoenigin: true,
+            massnahmen:
+              volkDaten.name === "Quitte"
+                ? [{ text: "Schwarmkontrolle", faellig: [5, 19 + t], erledigt: [5, 19 + t, 10, 0] }]
+                : [],
+          },
+        );
+        await eintrag(
+          v,
+          [6, 4 + t, 9, 30],
+          {
+            honigGeerntet: true,
+            honigertragKg: Math.round((16 - g * 3 + zufall() * 3) * 2) / 2,
+            honigart: "Frühtracht",
+            volksstaerkeEinschaetzung: note(g),
+            notizen: standDaten.standtyp === "WANDER" ? "Frühtracht geerntet, danach an den Waldrand gewandert." : "Frühtracht geerntet.",
+          },
+          { ernten: true, aufsetzen: true, honigsorte: "Frühtracht" },
+        );
+        await eintrag(
+          v,
+          [7, 18 + t, 8, 30],
+          {
+            honigGeerntet: true,
+            honigertragKg: Math.round((14 - g * 2.5 + zufall() * 4) * 2) / 2,
+            honigart: standDaten.standtyp === "WANDER" ? "Waldhonig" : "Sommertracht",
+            varroaZaehlweise: "GEMUELLDIAGNOSE",
+            varroaAnzahl: Math.round(8 + g * 6 + zufall() * 10),
+            varroaGemuellTage: 7,
+            gesamteindruck: note(g),
+            notizen: "Letzte Ernte, Honigraum abgenommen. Windel für die Varroa-Kontrolle eingelegt.",
+          },
+          { ernten: true, honigsorte: standDaten.standtyp === "WANDER" ? "Waldhonig" : "Sommertracht", zurKoenigin: true },
+        );
+        await eintrag(v, [8, 20 + t, 18, 0], {
+          varroaZaehlweise: "GEMUELLDIAGNOSE",
+          varroaAnzahl: Math.round(2 + zufall() * 5),
+          varroaGemuellTage: 7,
+          fuetterungArt: "INVERTZUCKERSIRUP",
+          fuetterungMengeKg: 10,
+          fuettererAktion: "AUFGESETZT",
+          notizen: "Nach der Ameisensäure: wenig Milbenfall. Fütterung begonnen.",
+        });
+        await eintrag(v, [9, 14 + t, 17, 0], {
+          fuetterungArt: "INVERTZUCKERSIRUP",
+          fuetterungMengeKg: 6,
+          fuettererAktion: "ABGENOMMEN",
+          futtermengeEinschaetzung: note(1.5),
+          gewichtKg: Math.round((40 - g * 3 + zufall() * 3) * 2) / 2,
+          wiegemethode: "VOLLSTAENDIG",
+          notizen: "Eingefüttert.",
+        });
+        await eintrag(
+          v,
+          [10, 6 + t, 14, 0],
+          {
+            volksstaerkeEinschaetzung: note(g),
+            futtermengeEinschaetzung: note(1.5),
+            sanftmut: note(g),
+            gesamteindruck: note(g),
+            notizen: "Wintersitz gebildet. Mäusegitter dran.",
+          },
+          { zurKoenigin: true },
+        );
+      }
+    }
+
+    if (vergangen(am([7, 28]))) {
+      await prisma.behandlung.create({
+        data: {
+          medikamentId: ameisensaeure.id,
+          indikation: "Varroose",
+          datum: am([7, 28, 18, 0]),
+          endeDatum: vergangen(am([8, 11])) ? am([8, 11]) : null,
+          mengeJeVolk: 200,
+          wartezeitTage: 0,
+          anwender: "Beispiel-Imker",
+          bemerkung: "Langzeitverdunster, Heimstand und Waldrand.",
+          voelker: {
+            create: alleNeuen.map((volk) => ({
+              volkId: volk.id,
+              volkNameDamals: volk.name,
+              standNameDamals: volk.standName,
+            })),
+          },
+        },
+      });
+    }
+    await prisma.massnahme.createMany({
+      data: alleNeuen.map((volk, index) => ({
+        volkId: volk.id,
+        text: index % 3 === 0 ? "Futterkontrolle: Beute anheben" : "Varroa-Windel einlegen",
+        faelligAm: tageAb(index % 3 === 0 ? 1 : 5),
+        createdAt: tageAb(-7),
+      })),
+    });
+  }
 
   // --- Lager ----------------------------------------------------------
   await prisma.materialartikel.createMany({

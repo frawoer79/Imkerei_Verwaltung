@@ -3,6 +3,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import sharp from "sharp";
 import { aktuellesKonto } from "@/lib/konto";
+import { DEMO_UPLOAD_MELDUNG, istDemo } from "@/lib/demo";
 
 // Alle hochgeladenen Fotos landen in diesem Verzeichnis (nicht in `public/`,
 // da es sich um Nutzerdaten handelt, keine Build-Assets). In Produktion muss
@@ -56,6 +57,9 @@ export async function bildSpeichern(datei: File): Promise<{
   mimeType: string;
   groesse: number;
 }> {
+  // Öffentliche Demo: keine fremden Dateien auf dem Server (die Knöpfe sind
+  // dort ausgeblendet, das hier fängt alles andere ab).
+  if (istDemo()) throw new Error(DEMO_UPLOAD_MELDUNG);
   const verzeichnis = await uploadVerzeichnis();
   await mkdir(verzeichnis, { recursive: true });
 
@@ -84,6 +88,7 @@ export async function verkleinertesFotoSpeichern(datei: File): Promise<{
   originalDateiname: string;
   mimeType: string;
 }> {
+  if (istDemo()) throw new Error(DEMO_UPLOAD_MELDUNG);
   const verzeichnis = await uploadVerzeichnis();
   await mkdir(verzeichnis, { recursive: true });
 

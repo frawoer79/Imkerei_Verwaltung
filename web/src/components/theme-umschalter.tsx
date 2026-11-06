@@ -13,11 +13,24 @@ const beobachter = new Set<() => void>();
 
 function beobachten(callback: () => void) {
   beobachter.add(callback);
-  return () => beobachter.delete(callback);
+  // Solange nichts gewählt ist, folgt die Seite der Systemeinstellung. Wechselt
+  // diese (z.B. Handy abends automatisch dunkel), soll der Schalter mitziehen.
+  const system = window.matchMedia("(prefers-color-scheme: dark)");
+  system.addEventListener("change", callback);
+  return () => {
+    beobachter.delete(callback);
+    system.removeEventListener("change", callback);
+  };
 }
 
+// Ohne gespeicherte Wahl ist kein data-theme gesetzt, die Farben kommen dann
+// per CSS aus der Systemeinstellung. Der Schalter muss in dem Fall dieselbe
+// Quelle fragen, sonst zeigt er "hell", obwohl die Seite dunkel ist.
 function ermittleAktuellesThema(): Thema {
-  return document.documentElement.dataset.theme === "dark" ? "dunkel" : "hell";
+  const gesetzt = document.documentElement.dataset.theme;
+  if (gesetzt === "dark") return "dunkel";
+  if (gesetzt === "light") return "hell";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dunkel" : "hell";
 }
 
 // Auf dem Server ist unbekannt, welches Thema zuvor im Browser gewählt
