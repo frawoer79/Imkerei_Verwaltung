@@ -14,6 +14,10 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## Unveröffentlicht
+
+- Kleinigkeiten: Der Knopf zum Auswählen einer Datei ist deutlicher zu erkennen, auch im dunklen Design. Beschriftungen der Knöpfe brechen am Handy sauberer um. Zugeklappte Saisons im Verlauf eines Volkes bleiben auf dem Gerät zu.
+
 ## 1.2.1
 
 - Die Anleitung beschreibt jetzt den Wabenbestand: Waben beim Anlegen eines Volkes, Nachtragen bei älteren Völkern, Waben geben und entnehmen in der Durchsicht. Mit neuen Bildern.

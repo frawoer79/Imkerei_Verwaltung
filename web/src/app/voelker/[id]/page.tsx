@@ -14,6 +14,7 @@ import {
 } from "@/lib/actions";
 import { DokumenteMiniListe } from "@/components/dokumente-mini-liste";
 import { Card, knopfKlassen } from "@/components/ui";
+import { SaisonAufklappbar } from "@/components/saison-aufklappbar";
 import { anzeigeFarbe, koeniginZeile, verbleibKurz, type EreignisArt } from "@/lib/koeniginnen";
 import { KoeniginUmweiselnDialog } from "@/components/koenigin-umweiseln-dialog";
 import { KoeniginStern } from "@/components/koenigin-stern";
@@ -686,7 +687,7 @@ export default async function VolkDetailPage({
         <div className="grid grid-flow-col auto-cols-fr gap-1.5">
           <Link href={`/voelker/${volk.id}/bearbeiten`} className={AKTION_KACHEL}>
             <IconBearbeiten className={AKTION_SYMBOL} />
-            Bearbeiten
+            {"Bearbei\u00ADten"}
           </Link>
           <VolkUmzugDialog
             key={volk.eintraege.length}
@@ -834,7 +835,7 @@ export default async function VolkDetailPage({
             saison.punkte.filter((punkt) => punkt.art === "wechsel").length
           );
           return (
-          <details key={saison.jahr} open={index === 0} className="group">
+          <SaisonAufklappbar key={saison.jahr} jahr={saison.jahr} startOffen={index === 0}>
             <summary className="flex min-h-11 cursor-pointer list-none items-start justify-between gap-3 rounded-xl border border-rand-ruhig bg-card px-4 py-3 [&::-webkit-details-marker]:hidden">
               <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="font-semibold">
@@ -1242,7 +1243,7 @@ export default async function VolkDetailPage({
             );
           })}
           </div>
-          </details>
+          </SaisonAufklappbar>
           );
           })
         )}
