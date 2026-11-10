@@ -253,7 +253,7 @@ Im Volk auf **[Durchsicht erfassen]** tippen. Datum und Uhrzeit sind auf „jetz
 | Varroa | Zählweise (Puderzucker, Auswaschung, Gemülldiagnose), gezählte Milben, Probengröße bzw. Tage der Windel. Die App rechnet auf Milben je Tag bzw. Prozent um und vergleicht mit der Schadschwelle der Jahreszeit. Unter *Biotechnik* der Haken *Drohnenbrut geschnitten* und ein freies Feld. Verfahren mit Fahrplan wie TBE oder Bannwabe legst du unter [Behandlungen](#behandlungen) an. Tierarzneimittel gehören nicht hierher, sondern unter [Behandlungen](#behandlungen). |
 | Bewertung des Volkes | Regler für Volksstärke, Futtermenge, Sanftmut, Wabensitz, Schwarmtrieb, Legeleistung und Gesamteindruck, siehe unten. Dazu die Haken *Bienen haben mich angeflogen* und *Abgeschwärmt*. |
 | Honigraum & Ernte | Honigraum aufsetzen oder abnehmen, Ernte (die App schätzt die Menge aus den abgenommenen Zargen und Waben, du kannst sie anpassen) und Honigart. |
-| Fütterung | Futterart und Menge in kg, dazu der Haken *Fütterer aufgesetzt*. Er ist so vorbelegt, wie es gerade am Volk ist; nimmst du den Haken weg, gilt der Fütterer als abgenommen. |
+| Fütterung | Futterart und Menge in **Liter oder kg**, dazu der Haken *Fütterer aufgesetzt*. Bei Zuckerwasser in kg ist die Zuckermenge gemeint. Im Verlauf steht dazu die Zuckermenge als Näherung, z. B. „4,5 l, ≈ 2,8 kg Zucker“, so lassen sich Fütterungen vergleichen. Er ist so vorbelegt, wie es gerade am Volk ist; nimmst du den Haken weg, gilt der Fütterer als abgenommen. |
 | Gewicht | Gewogenes Gewicht, einseitig oder vollständig. Wiegst du in Teilen, tippst du einfach „13+17“, die App rechnet „= 30 kg“. Der Knopf **[+]** neben dem Feld hilft am iPhone, dessen Zahlentastatur kein Plus hat. |
 
 Unten folgen **Notizen**, **Maßnahmen** (eine pro Zeile, sie landen in der [Maßnahmenliste](#massnahmen)) und bis zu fünf **Fotos**, direkt mit der Handykamera oder aus der Mediathek.
@@ -571,6 +571,30 @@ Auf der Karte erscheint je Hornisse ein Flugkorridor. Mit Peilungen aus verschie
 
 *Nestsuche: neue Suche anlegen, darunter laufende Suchen und eine kurze Anleitung.*
 
+<a id="import"></a>
+
+## Umstieg von BeeInTouch
+
+Hast du deine Stockkarten bisher in BeeInTouch geführt, übernimmt die App sie aus dem PDF-Export. Das geht nur mit dem Hauptzugang unter *Einstellungen → Import*.
+
+1. In BeeInTouch je Volk die **Stockkarte als PDF** exportieren. Eine Datei je Volk.
+2. Unter *Einstellungen → Import* die PDF-Dateien auswählen, gern mehrere auf einmal. Die App liest sie direkt im Browser.
+3. Je Datei wählen, zu welchem **Volk in der App** sie gehört, oder *Neues Volk anlegen* mit Namen und **Bienenstand**, auf Wunsch einem neuen Stand.
+4. Unter *Was soll übernommen werden?* ankreuzen: Durchschauen, Fütterungen, Varroakontrollen, Honigernten, Behandlungen und auf Wunsch die *Königin aus dem Kopf der Karte*.
+5. Bei *Wem sollen die Einträge zugeschrieben werden?* dich oder einen Helfer wählen. So steht es auch in der Historie.
+6. Für Behandlungen braucht jede Behandlung ein Medikament: ein vorhandenes wählen oder es neu anlegen. Den Beleg lädst du später beim Medikament hoch.
+7. **[Vorschau ansehen]** zeigt, was angelegt wird und was nicht. Danach importieren.
+
+Ein zweiter Import derselben PDF legt nichts doppelt an. Du kannst also gefahrlos eine neuere Fassung der Stockkarte nachschieben.
+
+So wird übersetzt:
+
+- **Bewertungen** von 1 bis 5 werden umgedreht, denn in BeeInTouch ist 5 am besten.
+- **Entnommene Waben** (negative Zahlen in BeeInTouch) stehen in den Notizen.
+- **Fütterungen** kommen mit Menge und Einheit (Liter oder kg) in die Felder. Der Name des Futters, etwa „Bio Zucker (1:1)“, bleibt als Notiz stehen, zum Beispiel für die Bio-Kontrolle.
+- **Totale Brutentnahme** wird zum Verfahren *TBE* unter Behandlungen.
+- **Honigernten ohne Menge** werden übersprungen.
+
 <a id="einstellungen"></a>
 
 ## Einstellungen im Überblick
@@ -586,6 +610,7 @@ Die Einstellungen sind in vier Gruppen sortiert: *Betrieb*, *Ausstattung*, *Verb
 - **Lager:** je Erzeugnis die Sorten und Gebinde (Eimer, Gläser, Sonstige), bei Honig der Schalter „Eimer einzeln wiegen“ (echtes Gewicht je Eimer, z. B. für die Bio-Kontrolle). Ganz unten in der Karte steht der Schalter *Warenwert anzeigen* (Vorgabe aus, gilt für alle Erzeugnisse). Bei „an“ klappt darunter die Preisliste auf: *Standard* für Sorten ohne eigenen Preis, dazu je Sorte aufklappbar ein Preis je Stück für jedes Glas und ein Preis je kg für Eimer und lose Menge. Eimer rechnen immer je kg. Ganz unten die Lagerorte, nur nötig, wenn du an mehreren Orten lagerst.
 - **QR-Codes** und **Kalender-Abo**, siehe oben.
 - **Helfer:** Zugänge für Familie oder Mitimker, mit Lese- oder Schreibrecht, siehe [Helfer einladen](#zugang).
+- **Import:** Stockkarten aus BeeInTouch übernehmen, siehe [Umstieg von BeeInTouch](#import).
 - **Historie:** wer wann was angelegt oder geändert hat.
 - **System:** Version der App, Update-Prüfung ein oder aus, *Was ist neu?* und **[Update einspielen]**.
 

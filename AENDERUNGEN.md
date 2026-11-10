@@ -14,6 +14,11 @@ So sieht ein Abschnitt aus:
 
 Neue Abschnitte kommen oben hin.
 
+## Unveröffentlicht
+
+- Fütterung: Die Menge lässt sich in Litern oder Kilogramm eintragen, neu sind Zuckerwasser 0,7:1 und 2:1. Die Stockkarte zeigt dazu die Zuckermenge als Näherung, damit Fütterungen vergleichbar sind. Bei Zuckerwasser in Kilogramm gilt die Zuckermenge selbst. Der BeeInTouch-Import übernimmt Liter-Angaben jetzt in die Felder statt in die Notiz.
+- Neu unter Einstellungen: **Import aus BeeInTouch**. Du lädst die Stockkarten als PDF hoch (eine je Volk), siehst vorab, was angelegt wird, und die App übernimmt Durchschauen, Fütterungen, Behandlungen, Honigernten, Varroakontrollen und auf Wunsch die Königin. Die Einträge lassen sich einem Helfer zuschreiben. Derselbe Import lässt sich gefahrlos wiederholen, nichts wird doppelt angelegt.
+
 ## 1.2.1
 
 - Die Anleitung beschreibt jetzt den Wabenbestand: Waben beim Anlegen eines Volkes, Nachtragen bei älteren Völkern, Waben geben und entnehmen in der Durchsicht. Mit neuen Bildern.

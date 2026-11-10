@@ -100,6 +100,7 @@ th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
     <li><a href="#lager">Lager</a></li>
     <li><a href="#qr">QR-Codes &amp; Scannen</a></li>
     <li><a href="#velutina">Velutina</a></li>
+    <li><a href="#import">Umstieg von BeeInTouch</a></li>
     <li><a href="#einstellungen">Einstellungen</a></li>
     <li><a href="#fragen">Tipps &amp; Fragen</a></li>
   </ol>
@@ -316,7 +317,7 @@ th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
   <tr><td>Varroa</td><td>Zählweise (Puderzucker, Auswaschung, Gemülldiagnose), gezählte Milben, Probengröße bzw. Tage der Windel. Die App rechnet auf Milben je Tag bzw. Prozent um und vergleicht mit der Schadschwelle der Jahreszeit. Unter <em>Biotechnik</em> der Haken <em>Drohnenbrut geschnitten</em> und ein freies Feld. Verfahren mit Fahrplan wie TBE oder Bannwabe legst du unter <a href="#behandlungen">Behandlungen</a> an. Tierarzneimittel gehören nicht hierher, sondern unter <a href="#behandlungen">Behandlungen</a>.</td></tr>
   <tr><td>Bewertung des Volkes</td><td>Regler für Volksstärke, Futtermenge, Sanftmut, Wabensitz, Schwarmtrieb, Legeleistung und Gesamteindruck, siehe unten. Dazu die Haken <em>Bienen haben mich angeflogen</em> und <em>Abgeschwärmt</em>.</td></tr>
   <tr><td>Honigraum &amp; Ernte</td><td>Honigraum aufsetzen oder abnehmen, Ernte (die App schätzt die Menge aus den abgenommenen Zargen und Waben, du kannst sie anpassen) und Honigart.</td></tr>
-  <tr><td>Fütterung</td><td>Futterart und Menge in kg, dazu der Haken <em>Fütterer aufgesetzt</em>. Er ist so vorbelegt, wie es gerade am Volk ist; nimmst du den Haken weg, gilt der Fütterer als abgenommen.</td></tr>
+  <tr><td>Fütterung</td><td>Futterart und Menge in <strong>Liter oder kg</strong>, dazu der Haken <em>Fütterer aufgesetzt</em>. Bei Zuckerwasser in kg ist die Zuckermenge gemeint. Im Verlauf steht dazu die Zuckermenge als Näherung, z.&nbsp;B. „4,5 l, ≈ 2,8 kg Zucker“, so lassen sich Fütterungen vergleichen. Er ist so vorbelegt, wie es gerade am Volk ist; nimmst du den Haken weg, gilt der Fütterer als abgenommen.</td></tr>
   <tr><td>Gewicht</td><td>Gewogenes Gewicht, einseitig oder vollständig. Wiegst du in Teilen, tippst du einfach „13+17“, die App rechnet „= 30 kg“. Der Knopf <span class="knopf">+</span> neben dem Feld hilft am iPhone, dessen Zahlentastatur kein Plus hat.</td></tr>
 </table>
 <p>Unten folgen <strong>Notizen</strong>, <strong>Maßnahmen</strong> (eine pro Zeile, sie landen in der <a href="#massnahmen">Maßnahmenliste</a>) und bis zu fünf <strong>Fotos</strong>, direkt mit der Handykamera oder aus der Mediathek.</p>
@@ -551,8 +552,32 @@ th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
 </section>
 
 <!-- 15 -->
+<section id="import">
+<h2><span class="nr">15</span>Umstieg von BeeInTouch</h2>
+<p>Hast du deine Stockkarten bisher in BeeInTouch geführt, übernimmt die App sie aus dem PDF-Export. Das geht nur mit dem Hauptzugang unter <em>Einstellungen → Import</em>.</p>
+<ol>
+  <li>In BeeInTouch je Volk die <strong>Stockkarte als PDF</strong> exportieren. Eine Datei je Volk.</li>
+  <li>Unter <em>Einstellungen → Import</em> die PDF-Dateien auswählen, gern mehrere auf einmal. Die App liest sie direkt im Browser.</li>
+  <li>Je Datei wählen, zu welchem <strong>Volk in der App</strong> sie gehört, oder <em>Neues Volk anlegen</em> mit Namen und <strong>Bienenstand</strong>, auf Wunsch einem neuen Stand.</li>
+  <li>Unter <em>Was soll übernommen werden?</em> ankreuzen: Durchschauen, Fütterungen, Varroakontrollen, Honigernten, Behandlungen und auf Wunsch die <em>Königin aus dem Kopf der Karte</em>.</li>
+  <li>Bei <em>Wem sollen die Einträge zugeschrieben werden?</em> dich oder einen Helfer wählen. So steht es auch in der Historie.</li>
+  <li>Für Behandlungen braucht jede Behandlung ein Medikament: ein vorhandenes wählen oder es neu anlegen. Den Beleg lädst du später beim Medikament hoch.</li>
+  <li><span class="knopf">Vorschau ansehen</span> zeigt, was angelegt wird und was nicht. Danach importieren.</li>
+</ol>
+<p>Ein zweiter Import derselben PDF legt nichts doppelt an. Du kannst also gefahrlos eine neuere Fassung der Stockkarte nachschieben.</p>
+<p>So wird übersetzt:</p>
+<ul>
+  <li><strong>Bewertungen</strong> von 1 bis 5 werden umgedreht, denn in BeeInTouch ist 5 am besten.</li>
+  <li><strong>Entnommene Waben</strong> (negative Zahlen in BeeInTouch) stehen in den Notizen.</li>
+  <li><strong>Fütterungen</strong> kommen mit Menge und Einheit (Liter oder kg) in die Felder. Der Name des Futters, etwa „Bio Zucker (1:1)“, bleibt als Notiz stehen, zum Beispiel für die Bio-Kontrolle.</li>
+  <li><strong>Totale Brutentnahme</strong> wird zum Verfahren <em>TBE</em> unter Behandlungen.</li>
+  <li><strong>Honigernten ohne Menge</strong> werden übersprungen.</li>
+</ul>
+</section>
+
+<!-- 16 -->
 <section id="einstellungen">
-<h2><span class="nr">15</span>Einstellungen im Überblick</h2>
+<h2><span class="nr">16</span>Einstellungen im Überblick</h2>
 <p>Die Einstellungen sind in vier Gruppen sortiert: <em>Betrieb</em>, <em>Ausstattung</em>, <em>Verbindungen</em> und (nur beim Inhaber) <em>Nur für dich</em>. Am Handy siehst du sie als Liste, jede Zeile zeigt kurz, wie es steht. Tippen öffnet den Punkt, <span class="knopf">← Zurück</span> führt wieder zur Liste. Am PC und am iPad quer stehen alle Punkte links in einer Spalte, rechts der geöffnete Punkt.</p>
 <ul>
   <li><strong>Bienenhalter:</strong> Name, Anschrift, Bundesland, Telefon, E-Mail, Registriernummer, für den Behandlungsnachweis und die Hornissen-Meldungen. Dazu <em>Name im Menü</em> (höchstens 30 Zeichen), leer steht dort „Imkereiverwaltung“.</li>
@@ -564,6 +589,7 @@ th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
   <li><strong>Lager:</strong> je Erzeugnis die Sorten und Gebinde (Eimer, Gläser, Sonstige), bei Honig der Schalter „Eimer einzeln wiegen“ (echtes Gewicht je Eimer, z.&nbsp;B. für die Bio-Kontrolle). Ganz unten in der Karte steht der Schalter <em>Warenwert anzeigen</em> (Vorgabe aus, gilt für alle Erzeugnisse). Bei „an“ klappt darunter die Preisliste auf: <em>Standard</em> für Sorten ohne eigenen Preis, dazu je Sorte aufklappbar ein Preis je Stück für jedes Glas und ein Preis je kg für Eimer und lose Menge. Eimer rechnen immer je kg. Ganz unten die Lagerorte, nur nötig, wenn du an mehreren Orten lagerst.</li>
   <li><strong>QR-Codes</strong> und <strong>Kalender-Abo</strong>, siehe oben.</li>
   <li><strong>Helfer:</strong> Zugänge für Familie oder Mitimker, mit Lese- oder Schreibrecht, siehe <a href="#zugang">Helfer einladen</a>.</li>
+  <li><strong>Import:</strong> Stockkarten aus BeeInTouch übernehmen, siehe <a href="#import">Umstieg von BeeInTouch</a>.</li>
   <li><strong>Historie:</strong> wer wann was angelegt oder geändert hat.</li>
   <li><strong>System:</strong> Version der App, Update-Prüfung ein oder aus, <em>Was ist neu?</em> und <span class="knopf">Update einspielen</span>.</li>
 </ul>
@@ -578,9 +604,9 @@ th { color: var(--muted); font-weight: 600; font-size: 13.5px; }
 </div>
 </section>
 
-<!-- 16 -->
+<!-- 17 -->
 <section id="fragen">
-<h2><span class="nr">16</span>Tipps und häufige Fragen</h2>
+<h2><span class="nr">17</span>Tipps und häufige Fragen</h2>
 <h3>Muss ich jede Durchsicht vollständig ausfüllen?</h3>
 <p>Nein. Trag ein, was du gesehen hast, alles andere bleibt leer. Eine Durchsicht mit nur einer Notiz ist völlig in Ordnung.</p>
 <h3>Ich habe alle Völker eines Stands gefüttert. Muss ich das für jedes Volk eintragen?</h3>
